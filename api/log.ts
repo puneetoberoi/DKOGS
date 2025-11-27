@@ -1,33 +1,32 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.VITE_SUPABASE_ANON_KEY!
-);
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
 
-interface LogRequestBody {
-  type: 'success' | 'error' | 'query';
-  keyword?: string;
-  sources?: string[];
-  region?: string;
-  lookbackDays?: number;
-  gapsRequested?: number;
-  paymentAmount?: number;
-  currency?: string;
-  errorMessage?: string;
-  durationMs?: number;
-  userCountry?: string;
-  userConsentGiven?: boolean;
-}
+const supabase = supabaseUrl && supabaseKey 
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  if (!supabase) {
+    return res.status(200).json({ success: true, message: 'Logging disabled - no Supabase config' });
+  }
+
   try {
-    const body = req.body as LogRequestBody;
+    const body = req.body;
 
     const { error } = await supabase.from('logs').insert({
       type: body.type,
