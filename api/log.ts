@@ -1,10 +1,10 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
 
-const supabase = supabaseUrl && supabaseKey 
+const supabase = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey)
   : null;
 
@@ -22,7 +22,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (!supabase) {
-    return res.status(200).json({ success: true, message: 'Logging disabled - no Supabase config' });
+    console.log('Supabase not configured, skipping log');
+    return res.status(200).json({ success: true, message: 'Logging disabled' });
   }
 
   try {
@@ -39,19 +40,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       currency: body.currency,
       error_message: body.errorMessage,
       duration_ms: body.durationMs,
-      user_country: body.userCountry,
-      user_consent_given: body.userConsentGiven,
     });
 
     if (error) {
-      console.error('Supabase insert error:', error);
-      return res.status(500).json({ error: 'Failed to save log' });
+      console.error('Supabase error:', error);
+      return res.status(500).json({ error: 'Failed to log' });
     }
 
     return res.status(200).json({ success: true });
-
   } catch (error) {
-    console.error('Log API error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('Log error:', error);
+    return res.status(500).json({ error: 'Internal error' });
   }
 }
