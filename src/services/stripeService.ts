@@ -1,16 +1,15 @@
 // src/services/stripeService.ts
 
 import { loadStripe } from '@stripe/stripe-js';
-import type { Stripe } from '@stripe/stripe-js';
 
-let stripePromise: Promise<Stripe | null> | null = null;
+let stripePromise: ReturnType<typeof loadStripe> | null = null;
 
-export function getStripe(): Promise<Stripe | null> {
+export function getStripe() {
   if (!stripePromise) {
     const key = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
     if (!key) {
       console.error('Stripe publishable key not found');
-      return Promise.resolve(null);
+      return null;
     }
     stripePromise = loadStripe(key);
   }
@@ -51,16 +50,17 @@ export async function createCheckoutSession(params: CheckoutParams): Promise<{ s
 }
 
 export async function redirectToCheckout(sessionId: string): Promise<void> {
-  const stripe = await getStripe();
+  // New method: Use the URL returned from create-checkout API
+  // The API returns { sessionId, url } - we redirect to the URL directly
   
-  if (!stripe) {
-    throw new Error('Stripe failed to load');
+  // First, try to get the URL from sessionStorage (set by PaymentModal)
+  const pendingAnalysis = sessionStorage.getItem('pendingAnalysis');
+  
+  if (pendingAnalysis) {
+    // We already have the session, the PaymentModal will handle redirect via URL
+    return;
   }
 
-  // Use the correct method - redirectToCheckout exists on Stripe object
-  const { error } = await (stripe as any).redirectToCheckout({ sessionId });
-  
-  if (error) {
-    throw new Error(error.message || 'Redirect to checkout failed');
-  }
-}
+  // Fallback: Create a new session and redirect
+  throw new Error('Session not found. Please try again.');
+}s
