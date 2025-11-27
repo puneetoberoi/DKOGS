@@ -10,7 +10,7 @@ import ResultsDashboard from './components/ResultsDashboard';
 import TrendingView from './components/TrendingView';
 import { FirstTimeUserModal } from './components/LegalDisclaimers';
 import { PaymentModal } from './components/PaymentModal';
-import { Search, Globe, Clock, MapPin, Sliders, ArrowRight, Sparkles, LayoutDashboard, Flame, Layers, Lock, ChevronDown } from 'lucide-react';
+import { Search, Globe, Clock, MapPin, Sliders, ArrowRight, Sparkles, LayoutDashboard, Flame } from 'lucide-react';
 import {
   getDefaultLocation,
   detectUserLocation,
@@ -49,17 +49,8 @@ const DEPTH_OPTIONS = [
   { value: 'Deep Dive', label: 'Deep Dive (Full)' }
 ];
 
-// GAP COUNT OPTIONS
-const GAP_OPTIONS = [
-  { value: 3, label: '3 Gaps' },
-  { value: 5, label: '5 Gaps' },
-  { value: 10, label: '10 Gaps' },
-  { value: 15, label: '15 Gaps' },
-  { value: 20, label: '20 Gaps' }
-];
-
 // ============================================
-// CUSTOM SELECT COMPONENT (Clean Dropdowns)
+// CUSTOM SELECT COMPONENT
 // ============================================
 interface SelectProps {
   value: string | number;
@@ -95,7 +86,9 @@ const CustomSelect: React.FC<SelectProps> = ({ value, onChange, options, disable
         ))}
       </select>
       <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-        <ChevronDown className={`w-4 h-4 ${disabled ? 'text-slate-300' : 'text-slate-400'}`} />
+        <svg className={`w-4 h-4 ${disabled ? 'text-slate-300' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
       </div>
     </div>
   );
@@ -115,11 +108,54 @@ const App: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [locationData, setLocationData] = useState<LocationData>(getDefaultLocation());
   
-  // Check for first-time user
+  // Check for first-time user AND payment success on mount
   useEffect(() => {
     const hasSeenLegal = localStorage.getItem('gapspotter_legal_accepted');
     if (!hasSeenLegal) {
       setShowLegalModal(true);
+    } else {
+      // If legal already accepted, detect location
+      detectUserLocation().then(setLocationData).catch(() => setLocationData(getDefaultLocation()));
+    }
+
+    // Check if returning from successful payment
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get('success');
+    const sessionId = urlParams.get('session_id');
+
+    if (success === 'true' && sessionId) {
+      console.log('Payment successful! Session:', sessionId);
+      
+      // Get pending analysis from sessionStorage
+      const pendingAnalysis = sessionStorage.getItem('pendingAnalysis');
+      if (pendingAnalysis) {
+        const analysisData = JSON.parse(pendingAnalysis);
+        console.log('Running analysis with:', analysisData);
+        
+        // Clear the URL params
+        window.history.replaceState({}, '', window.location.pathname);
+        
+        // Set form data and run analysis
+        setForm(prev => ({
+          ...prev,
+          keyword: analysisData.keyword,
+          sources: analysisData.sources,
+          geography: analysisData.region,
+        }));
+        
+        // Run the analysis
+        runPaidAnalysis(analysisData.keyword, analysisData.sources, analysisData.region, analysisData.gaps);
+        
+        // Clear sessionStorage
+        sessionStorage.removeItem('pendingAnalysis');
+      }
+    }
+
+    // Check if payment was canceled
+    const canceled = urlParams.get('canceled');
+    if (canceled === 'true') {
+      console.log('Payment was canceled');
+      window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
 
@@ -131,6 +167,7 @@ const App: React.FC = () => {
       localStorage.setItem('gapspotter_location_consent', 'true');
       try {
         const location = await detectUserLocation();
+        console.log('Location detected:', location);
         setLocationData(location);
       } catch (error) {
         console.error('Location detection failed:', error);
@@ -142,26 +179,30 @@ const App: React.FC = () => {
     }
   };
 
-  // Payment handlers
-  const handlePaymentSuccess = (gaps: number) => {
-    setShowPaymentModal(false);
-    setGapCount(gaps);
-    runAnalysisAfterPayment(gaps);
-  };
-
-  const runAnalysisAfterPayment = async (paidGapCount: number) => {
-    console.log(`🎯 Starting PAID analysis for: "${form.keyword}" with ${paidGapCount} gaps`);
-    console.log(`📊 Mode: Deep Dive (Real) - PAID`);
-
+  // Run analysis after successful payment
+  const runPaidAnalysis = async (keyword: string, sources: string[], region: string, gaps: number) => {
+    console.log(`🎯 Starting PAID analysis for: "${keyword}" with ${gaps} gaps`);
+    
     setStatus(AnalysisStatus.SCRAPING);
     setIsDemoMode(false);
 
     try {
-      const result = await analyzeMarket({ ...form, gapCount: paidGapCount }, (newStatus: string) => {
-  	setStatus(newStatus as AnalysisStatus);
+      const params: SearchParams = {
+        keyword,
+        sources,
+        lookback: 'Last 6 Months',
+        geography: region,
+        depth: 'Deep Dive',
+        useGroq: true,
+        useBytez: true,
+        gapCount: gaps,
+      };
+
+      const result = await analyzeMarket(params, (newStatus: string) => {
+        setStatus(newStatus as AnalysisStatus);
       });
-      console.log('✅ Paid analysis completed');
       
+      console.log('✅ Paid analysis completed');
       setReport(result);
       setStatus(AnalysisStatus.COMPLETE);
       
@@ -171,8 +212,14 @@ const App: React.FC = () => {
       setTimeout(() => setStatus(AnalysisStatus.IDLE), 3000);
     }
   };
+
+  // Payment success handler (called from PaymentModal)
+  const handlePaymentSuccess = (gaps: number) => {
+    setShowPaymentModal(false);
+    runPaidAnalysis(form.keyword, form.sources, form.geography, gaps);
+  };
   
-  // Form state - Quick Scan is default
+  // Form state
   const [form, setForm] = useState<SearchParams>({
     keyword: '',
     sources: ['Online Communities', 'E-commerce Reviews', 'Social Media'],
@@ -182,9 +229,6 @@ const App: React.FC = () => {
     useGroq: true,
     useBytez: true
   });
-
-  // Gap Count state
-  const [gapCount, setGapCount] = useState(5);
   
   // Derived state
   const isQuickScan = form.depth === 'Quick Scan';
@@ -210,9 +254,7 @@ const App: React.FC = () => {
     setActiveTab('search');
   };
 
-  // ============================================
-  // MAIN ANALYSIS FUNCTION
-  // ============================================
+  // Main analysis function
   const runAnalysis = useCallback(async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
@@ -224,20 +266,18 @@ const App: React.FC = () => {
     console.log(`🎯 Starting analysis for: "${form.keyword}"`);
     console.log(`📊 Mode: ${isQuickScan ? 'Quick Scan (Demo)' : 'Deep Dive (Real)'}`);
 
-    // If Deep Dive, show payment modal first
+    // If Deep Dive, show payment modal
     if (!isQuickScan) {
       setShowPaymentModal(true);
       return;
     }
 
-    // Quick Scan continues as before (no payment required)
+    // Quick Scan - run demo
     setStatus(AnalysisStatus.SCRAPING);
+    setIsDemoMode(true);
 
     try {
-      let result: MarketReport;
-      
-      setIsDemoMode(true);
-      console.log('🎭 Demo Mode: Generating sample data (NO API calls)');
+      console.log('🎭 Demo Mode: Generating sample data');
       
       await new Promise(r => setTimeout(r, 1000));
       setStatus(AnalysisStatus.CLUSTERING);
@@ -245,8 +285,8 @@ const App: React.FC = () => {
       setStatus(AnalysisStatus.SCORING);
       await new Promise(r => setTimeout(r, 600));
       
-      result = generateDemoReport(form.keyword, form.geography);
-      console.log('✅ Demo report generated successfully');
+      const result = generateDemoReport(form.keyword, form.geography);
+      console.log('✅ Demo report generated');
       
       setReport(result);
       setStatus(AnalysisStatus.COMPLETE);
@@ -270,9 +310,7 @@ const App: React.FC = () => {
     handleReset();
   };
 
-  // ============================================
-  // SEARCH CONTENT COMPONENT
-  // ============================================
+  // Search Content Component
   const SearchContent = () => {
     if (status === AnalysisStatus.COMPLETE && report) {
       return (
@@ -293,7 +331,7 @@ const App: React.FC = () => {
       <div className="flex-1 flex items-center justify-center p-3 sm:p-4 w-full">
         <div className="max-w-xl w-full space-y-5 sm:space-y-8">
           
-          {/* Hero Copy */}
+          {/* Hero */}
           <div className="text-center space-y-2 sm:space-y-4 px-2">
             <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-slate-900 tracking-tight">
               Find Your Next <br/>
@@ -307,11 +345,11 @@ const App: React.FC = () => {
             </p>
           </div>
 
-          {/* Input Form */}
+          {/* Form */}
           <div className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-xl border border-slate-100">
             <form onSubmit={runAnalysis} className="space-y-4 sm:space-y-6">
               
-              {/* Keyword Input */}
+              {/* Keyword */}
               <div className="space-y-1.5 sm:space-y-2">
                 <label className="text-xs sm:text-sm font-semibold text-slate-700 flex items-center">
                   <Search className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 text-indigo-500"/> 
@@ -329,32 +367,32 @@ const App: React.FC = () => {
 
               {/* Sources */}
               <div className="space-y-1.5 sm:space-y-2">
-                 <label className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase flex items-center">
-                   <Globe className="w-3 h-3 mr-1"/> Data Sources
-                 </label>
-                 <div className="flex flex-wrap gap-1 sm:gap-2">
-                    {AVAILABLE_SOURCES.map(src => {
-                      const isActive = form.sources.includes(src);
-                      return (
-                        <button
-                          key={src}
-                          type="button"
-                          onClick={() => toggleSource(src)}
-                          className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium rounded-full border transition-all ${
-                            isActive 
-                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' 
-                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-white hover:border-indigo-300 hover:text-indigo-600'
-                          }`}
-                        >
-                          {src}
-                        </button>
-                      );
-                    })}
-                 </div>
+                <label className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase flex items-center">
+                  <Globe className="w-3 h-3 mr-1"/> Data Sources
+                </label>
+                <div className="flex flex-wrap gap-1 sm:gap-2">
+                  {AVAILABLE_SOURCES.map(src => {
+                    const isActive = form.sources.includes(src);
+                    return (
+                      <button
+                        key={src}
+                        type="button"
+                        onClick={() => toggleSource(src)}
+                        className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium rounded-full border transition-all ${
+                          isActive 
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' 
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-white hover:border-indigo-300 hover:text-indigo-600'
+                        }`}
+                      >
+                        {src}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               
-              {/* Settings Grid */}
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              {/* Settings Grid - Now 3 columns without Gap Count */}
+              <div className="grid grid-cols-3 gap-3 sm:gap-4">
                 
                 {/* Lookback */}
                 <div className="space-y-1 sm:space-y-1.5">
@@ -383,7 +421,7 @@ const App: React.FC = () => {
                 {/* Depth */}
                 <div className="space-y-1 sm:space-y-1.5">
                   <label className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase flex items-center">
-                    <Sliders className="w-3 h-3 mr-1"/> Analysis Depth
+                    <Sliders className="w-3 h-3 mr-1"/> Depth
                   </label>
                   <CustomSelect
                     value={form.depth}
@@ -392,33 +430,10 @@ const App: React.FC = () => {
                   />
                 </div>
 
-                {/* Opportunities - Locked for Quick Scan */}
-                <div className="space-y-1 sm:space-y-1.5">
-                  <label className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase flex items-center">
-                    <Layers className="w-3 h-3 mr-1"/> Opportunities
-                    {isQuickScan && <Lock className="w-3 h-3 ml-1 text-amber-500" />}
-                  </label>
-                  
-                  <div className="relative">
-                    <CustomSelect
-                      value={isQuickScan ? 3 : gapCount}
-                      onChange={(val) => setGapCount(Number(val))}
-                      options={GAP_OPTIONS}
-                      disabled={isQuickScan}
-                    />
-                    
-                    {isQuickScan && (
-                      <div className="absolute inset-0 bg-slate-100/70 backdrop-blur-[1px] rounded-lg flex items-center justify-center cursor-not-allowed">
-                        <span className="text-[9px] sm:text-xs font-medium text-slate-500 flex items-center gap-1">
-                          <Lock className="w-3 h-3" /> Upgrade
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                {/* GAP COUNT DROPDOWN REMOVED - Now selected in Payment Modal */}
               </div>
 
-              {/* Quick Scan Info Banner */}
+              {/* Quick Scan Banner */}
               {isQuickScan && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 sm:p-3">
                   <p className="text-[10px] sm:text-xs text-amber-800 leading-relaxed">
@@ -441,8 +456,8 @@ const App: React.FC = () => {
                   ${!hasKeyword 
                     ? 'bg-slate-300 cursor-not-allowed text-slate-500' 
                     : isQuickScan 
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-200/50 hover:shadow-amber-300/50' 
-                      : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200/50 hover:shadow-indigo-300/50'
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-200/50' 
+                      : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200/50'
                   }
                 `}
               >
@@ -461,12 +476,10 @@ const App: React.FC = () => {
     );
   };
 
-  // ============================================
-  // MAIN RENDER
-  // ============================================
+  // Main Render
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Legal Modal (Merged with Location Consent) */}
+      {/* Legal Modal */}
       {showLegalModal && <FirstTimeUserModal onAccept={handleLegalAccept} />}
 
       {/* Payment Modal */}
