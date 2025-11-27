@@ -1,8 +1,8 @@
 import Stripe from 'stripe';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-05-28.basil',
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2024-06-20',
 });
 
 const PRICING = {
@@ -18,13 +18,12 @@ const PRICING = {
     10: { amount: 899, label: '10 Market Gaps - $8.99 CAD' },
     15: { amount: 1099, label: '15 Market Gaps - $10.99 CAD' },
   },
-} as const;
+};
 
 type GapCount = 3 | 5 | 10 | 15;
 type Currency = 'USD' | 'CAD';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -37,10 +36,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const { gaps, currency, keyword, sources, region, lookbackDays } = req.body;
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.error('STRIPE_SECRET_KEY is not set');
+    return res.status(500).json({ error: 'Stripe not configured' });
+  }
 
-    console.log('Received request:', { gaps, currency, keyword, region });
+  try {
+    const body = req.body;
+
+    if (!body) {
+      return res.status(400).json({ error: 'Request body is empty' });
+    }
+
+    const gaps = Number(body.gaps);
+    const currency = body.currency || 'USD';
+    const keyword = body.keyword || '';
+    const sources = body.sources || [];
+    const region = body.region || '';
+    const lookbackDays = body.lookbackDays || 30;
+
+    console.log('Request received:', { gaps, currency, keyword, region });
 
     if (![3, 5, 10, 15].includes(gaps)) {
       return res.status(400).json({ error: 'Invalid gap count' });
@@ -53,7 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const pricing = PRICING[currency as Currency][gaps as GapCount];
     const origin = req.headers.origin || 'https://dkogs.vercel.app';
 
-    console.log('Creating Stripe session...');
+    console.log('Creating Stripe session:', { currency, amount: pricing.amount, origin });
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -74,12 +89,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       success_url: `${origin}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/?canceled=true`,
       metadata: {
-        keyword: keyword || '',
-        sources: JSON.stringify(sources || []),
-        region: region || '',
-        lookbackDays: String(lookbackDays || 30),
+        keyword: String(keyword),
+        sources: JSON.stringify(sources),
+        region: String(region),
+        lookbackDays: String(lookbackDays),
         gaps: String(gaps),
-        currency: currency,
+        currency: String(currency),
       },
     });
 
@@ -90,7 +105,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       url: session.url,
     });
 
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('Stripe error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return res.status(500).json({
@@ -98,4 +113,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       details: message,
     });
   }
-}s
+}
