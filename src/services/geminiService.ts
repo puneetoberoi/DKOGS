@@ -1,0 +1,276 @@
+// src/services/geminiService.ts
+
+import { GoogleGenAI, Type } from "@google/genai";
+import Groq from "groq-sdk";
+import type { MarketReport, SearchParams } from "../schema";
+import { collectMarketData } from './dataCollector';
+import { analyzeBytez } from './bytezService';
+import { logSuccess, logError, logQuery } from '../utils/logger';
+
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+
+const groq = new Groq({
+  apiKey: import.meta.env.VITE_GROQ_API_KEY,
+  dangerouslyAllowBrowser: true
+});
+
+// Groq Analysis Function
+async function fetchGroqSentiment(keyword: string): Promise<string> {
+  if (!import.meta.env.VITE_GROQ_API_KEY) {
+    console.log('ℹ️ Groq: Not configured, skipping');
+    return "";
+  }
+
+  console.log(`⚡ Groq: Analyzing "${keyword}"...`);
+
+  try {
+    const completion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "user",
+          content: `Analyze market sentiment and trends for: ${keyword}. 
+          
+          Provide insights on:
+          1. Consumer sentiment (positive/negative factors)
+          2. Market opportunities
+          3. Potential challenges
+          4. Competitor landscape overview
+          
+          Be specific and actionable.`
+        }
+      ],
+      model: "llama-3.1-8b-instant",
+      max_tokens: 1000
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (content) {
+      console.log('✅ Groq: Analysis complete');
+      return `GROQ (LLAMA 3) ANALYSIS:\n${content}`;
+    }
+    return "";
+
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.warn("⚠️ Groq analysis skipped:", errorMessage);
+    return "";
+  }
+}
+
+// Helper to convert lookback string to days
+function getLookbackDays(lookback: string): number {
+  switch (lookback) {
+    case 'Last 30 Days': return 30;
+    case 'Last 6 Months': return 180;
+    case 'Last Year': return 365;
+    case 'All Time': return 730;
+    default: return 180;
+  }
+}
+
+// Main Analysis Function
+export const analyzeMarket = async (
+  params: SearchParams, 
+  onStatusUpdate?: (status: string) => void
+): Promise<MarketReport> => {
+  const modelId = 'gemini-2.0-flash';
+  const gapCount = params.gapCount || 5;
+  const startTime = Date.now();
+
+  // Log the query
+  logQuery({
+    keyword: params.keyword,
+    sources: params.sources,
+    region: params.geography,
+    lookbackDays: getLookbackDays(params.lookback),
+    gapsRequested: gapCount,
+  });
+  
+  try {
+    // 1. COLLECT REAL DATA
+    if (onStatusUpdate) onStatusUpdate('SCRAPING');
+    const realData = await collectMarketData(params);
+    
+    console.log(`📊 Collected ${realData.totalDataPoints} real data points`);
+    console.log(`📁 Sources breakdown:`, realData.sources);
+    
+    // 2. Gather External AI Intelligence
+    let externalContext = "";
+    const usedSources = ["Gemini 2.0 Flash"];
+
+    // Always call Groq (if API key exists)
+    if (onStatusUpdate) onStatusUpdate('GROQ_ANALYSIS');
+    const groqData = await fetchGroqSentiment(params.keyword);
+    if (groqData) {
+      externalContext += `\n\n${groqData}`;
+      usedSources.push("Groq (Llama 3)");
+    }
+
+    // Always call Bytez (if API key exists)
+    if (onStatusUpdate) onStatusUpdate('BYTEZ_ANALYSIS');
+    const bytezData = await analyzeBytez(params.keyword);
+    if (bytezData) {
+      externalContext += `\n\n${bytezData}`;
+      usedSources.push("Bytez AI");
+    }
+
+    if (onStatusUpdate) onStatusUpdate('CLUSTERING');
+
+    // 3. Main Gemini Analysis
+    const prompt = `
+      You are GapSpotter, an expert Market Researcher specializing in ${params.geography} markets.
+      
+      ANALYSIS TARGET: "${params.keyword}"
+      GEOGRAPHY: ${params.geography}
+      TIME PERIOD: ${params.lookback}
+      REQUESTED GAPS: ${gapCount}
+      
+      === REAL MARKET DATA (${realData.totalDataPoints} items) ===
+      ${realData.formattedForAI}
+      
+      === EXTERNAL AI ANALYSIS ===
+      ${externalContext || "No additional AI context available"}
+      
+      TASK:
+      Generate a structured market report based STRICTLY on the REAL MARKET DATA provided above.
+      
+      CRITICAL INSTRUCTIONS:
+      1. Generate EXACTLY ${gapCount} market gaps/opportunities. NO MORE, NO LESS. This is mandatory.
+      2. If you cannot find ${gapCount} distinct gaps, create variations or sub-categories to reach exactly ${gapCount}.
+      3. Competitors: Extract specific brand names mentioned in the data.
+      4. Evidence: The 'analyzedSamples' array MUST contain direct quotes from the provided data.
+      5. Trends: Generate exactly 5 years of trend data (${new Date().getFullYear() - 4} to ${new Date().getFullYear()}).
+      6. Scores: All scores must be integers between 0-100.
+      7. Focus analysis on ${params.geography} market specifically.
+      8. Include regulatory/compliance considerations for ${params.geography}.
+    `;
+
+    const schema = {
+      type: Type.OBJECT,
+      properties: {
+        industry: { type: Type.STRING },
+        totalAnalyzed: { type: Type.INTEGER },
+        overallSentiment: { type: Type.INTEGER, description: "Integer 0-100" },
+        sentimentBreakdown: {
+          type: Type.OBJECT,
+          properties: {
+            positive: { type: Type.INTEGER },
+            neutral: { type: Type.INTEGER },
+            negative: { type: Type.INTEGER }
+          },
+          required: ["positive", "neutral", "negative"]
+        },
+        sentimentFactors: {
+          type: Type.OBJECT,
+          properties: {
+            positive: { type: Type.ARRAY, items: { type: Type.STRING } },
+            negative: { type: Type.ARRAY, items: { type: Type.STRING } }
+          }
+        },
+        analyzedSamples: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              source: { type: Type.STRING },
+              date: { type: Type.STRING },
+              type: { type: Type.STRING },
+              snippet: { type: Type.STRING }
+            },
+            required: ["source", "date", "type", "snippet"]
+          }
+        },
+        competitors: { 
+          type: Type.ARRAY, 
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              name: { type: Type.STRING },
+              strength: { type: Type.STRING },
+              weakness: { type: Type.STRING }
+            },
+            required: ["name", "strength", "weakness"]
+          }
+        },
+        marketTrends: {
+          type: Type.ARRAY,
+          description: "Must contain exactly 5 items representing 5 years",
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              year: { type: Type.STRING },
+              demandIndex: { type: Type.NUMBER }
+            },
+            required: ["year", "demandIndex"]
+          }
+        },
+        summary: { type: Type.STRING },
+        gaps: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              description: { type: Type.STRING },
+              painPoints: { type: Type.ARRAY, items: { type: Type.STRING } },
+              sentimentScore: { type: Type.INTEGER },
+              willingnessToPay: { type: Type.STRING },
+              estimatedPrice: { type: Type.NUMBER },
+              competitionDensity: { type: Type.STRING, enum: ["Low", "Medium", "High", "Saturated"] },
+              opportunityScore: { type: Type.INTEGER },
+              recommendedSolution: { type: Type.STRING },
+              searchVolume: { type: Type.STRING },
+              sources: { type: Type.ARRAY, items: { type: Type.STRING } }
+            },
+            required: ["title", "description", "painPoints", "sentimentScore", "willingnessToPay", "estimatedPrice", "competitionDensity", "opportunityScore", "recommendedSolution", "sources"]
+          }
+        }
+      },
+      required: ["industry", "totalAnalyzed", "overallSentiment", "sentimentBreakdown", "sentimentFactors", "analyzedSamples", "competitors", "marketTrends", "gaps", "summary"]
+    };
+
+    const response = await ai.models.generateContent({
+      model: modelId,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: schema
+      }
+    });
+
+    if (!response.text) {
+      throw new Error("Failed to generate analysis");
+    }
+
+    const result = JSON.parse(response.text) as MarketReport;
+    
+    // Force real data count
+    result.totalAnalyzed = realData.totalDataPoints; 
+    result.dataSources = usedSources.concat(params.sources); 
+
+    // Log success
+    logSuccess({
+      keyword: params.keyword,
+      sources: params.sources,
+      region: params.geography,
+      lookbackDays: getLookbackDays(params.lookback),
+      gapsRequested: gapCount,
+      durationMs: Date.now() - startTime,
+    });
+    
+    return result;
+
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Log error
+    logError({
+      keyword: params.keyword,
+      sources: params.sources,
+      region: params.geography,
+      errorMessage: errorMessage,
+    });
+    
+    throw error;
+  }
+};

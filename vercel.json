@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "framework": "vite",
+  "functions": {
+    "api/*.ts": {
+      "memory": 256,
+      "maxDuration": 30
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    }
+  ]
+}
