@@ -1,11 +1,10 @@
 import Stripe from 'stripe';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+  apiVersion: '2024-12-18.acacia',
 });
 
-// Pricing tiers based on number of gaps
 const PRICING = {
   USD: {
     3: { amount: 299, label: '3 Market Gaps - $2.99' },
@@ -34,7 +33,15 @@ interface CheckoutRequestBody {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Only allow POST
+  // Handle CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -54,6 +61,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const pricing = PRICING[currency][gaps as GapCount];
 
+    // Get the origin for redirect URLs
+    const origin = req.headers.origin || req.headers.referer || 'https://dkogs.vercel.app';
+
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -71,8 +81,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         },
       ],
       mode: 'payment',
-      success_url: `${req.headers.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.origin}/?canceled=true`,
+      success_url: `${origin}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/?canceled=true`,
       metadata: {
         keyword,
         sources: JSON.stringify(sources),
@@ -95,4 +105,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-}
+}s
