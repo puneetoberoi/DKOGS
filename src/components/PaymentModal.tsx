@@ -107,7 +107,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <span className="font-medium">Sources:</span> {searchParams.sources.length} selected
           </p>
           <p className="text-sm text-gray-600">
-            <span className="font-medium">Region:</span> {searchParams.region}
+            <span className="font-medium">Market Region:</span> {searchParams.region}
           </p>
         </div>
 
@@ -143,9 +143,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           </div>
         </div>
 
-        {/* Currency Notice */}
+        {/* Currency Notice - FIXED: Shows IP-detected location, not user-selected region */}
         <div className="text-xs text-gray-500 text-center mb-4">
-          Prices shown in {locationData.currency} • Detected location: {locationData.country}
+          Prices in {locationData.currency} • Your location: {locationData.country}
         </div>
 
         {/* Error Message */}
