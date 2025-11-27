@@ -7,7 +7,6 @@ interface GeoResponse {
   source: string;
 }
 
-// Primary: ip-api.com (free, 45 requests/minute)
 async function detectWithIpApi(ip: string): Promise<GeoResponse | null> {
   try {
     const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode`);
@@ -28,33 +27,15 @@ async function detectWithIpApi(ip: string): Promise<GeoResponse | null> {
   }
 }
 
-// Fallback: ipinfo.io (free 50k/month)
-async function detectWithIpInfo(ip: string): Promise<GeoResponse | null> {
-  try {
-    const token = process.env.VITE_IPINFO_TOKEN;
-    const url = token 
-      ? `https://ipinfo.io/${ip}?token=${token}`
-      : `https://ipinfo.io/${ip}/json`;
-    
-    const response = await fetch(url);
-    const data = await response.json();
-    
-    if (data.country) {
-      return {
-        country: data.country === 'CA' ? 'Canada' : data.country,
-        countryCode: data.country,
-        currency: data.country === 'CA' ? 'CAD' : 'USD',
-        source: 'ipinfo',
-      };
-    }
-    return null;
-  } catch (error) {
-    console.error('ipinfo.io failed:', error);
-    return null;
-  }
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -63,40 +44,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const forwardedFor = req.headers['x-forwarded-for'];
   const ip = typeof forwardedFor === 'string' 
     ? forwardedFor.split(',')[0].trim() 
-    : req.socket.remoteAddress || '';
+    : req.socket?.remoteAddress || '';
 
   // Handle localhost/development
-  if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168')) {
+  if (ip === '127.0.0.1' || ip === '::1' || !ip) {
     return res.status(200).json({
-      country: 'Development',
+      country: 'United States',
       countryCode: 'US',
       currency: 'USD',
-      source: 'localhost-default',
-      detectedIp: ip,
+      source: 'default',
     });
   }
 
-  // Try primary service first
-  let result = await detectWithIpApi(ip);
-  
-  // Fallback to secondary if primary fails
-  if (!result) {
-    result = await detectWithIpInfo(ip);
-  }
+  // Try to detect location
+  const result = await detectWithIpApi(ip);
 
-  // Ultimate fallback
   if (!result) {
     return res.status(200).json({
-      country: 'Unknown',
+      country: 'United States',
       countryCode: 'US',
       currency: 'USD',
-      source: 'fallback-default',
-      detectedIp: ip,
+      source: 'fallback',
     });
   }
 
-  return res.status(200).json({
-    ...result,
-    detectedIp: ip,
-  });
-}
+  return res.status(200).json(result);
+}s
