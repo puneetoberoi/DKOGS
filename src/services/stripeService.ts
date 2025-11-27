@@ -63,4 +63,4 @@ export async function redirectToCheckout(sessionId: string): Promise<void> {
 
   // Fallback: Create a new session and redirect
   throw new Error('Session not found. Please try again.');
-}s
+}
