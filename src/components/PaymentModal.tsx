@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { X, CreditCard, Zap, Check, Loader2 } from 'lucide-react';
 import { getPricing, formatPrice } from '../utils/currencyDetector';
 import type { LocationData } from '../utils/currencyDetector';
-import { createCheckoutSession, redirectToCheckout } from '../services/stripeService';
+import { createCheckoutSession } from '../services/stripeService';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -24,7 +24,6 @@ type GapOption = 3 | 5 | 10 | 15;
 export const PaymentModal: React.FC<PaymentModalProps> = ({
   isOpen,
   onClose,
-  onSuccess,
   locationData,
   searchParams,
 }) => {
@@ -55,6 +54,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         throw new Error('Failed to create payment session. Please try again.');
       }
 
+      if (!session.url) {
+        throw new Error('No checkout URL returned. Please try again.');
+      }
+
       // Store session info for after redirect
       sessionStorage.setItem('pendingAnalysis', JSON.stringify({
         sessionId: session.sessionId,
@@ -62,8 +65,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         ...searchParams,
       }));
 
-      // Redirect to Stripe
-      await redirectToCheckout(session.sessionId);
+      // Redirect to Stripe Checkout URL directly
+      window.location.href = session.url;
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Payment failed. Please try again.';
