@@ -1,19 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { getSavedReports, deleteReport, type SavedReportItem } from '../services/reportService';
 import { User } from '@supabase/supabase-js';
-import { Loader2, Search, Trash2, Calendar, TrendingUp, ArrowRight, FolderOpen } from 'lucide-react';
+import { Loader2, Search, Trash2, Calendar, TrendingUp, ArrowRight, FolderOpen, CheckSquare, Square, BarChart2, X } from 'lucide-react';
 import type { MarketReport } from '../schema';
 
 interface DashboardViewProps {
   user: User;
   onViewReport: (report: MarketReport) => void;
   onStartNewSearch: () => void;
+  onCompare: (reports: MarketReport[]) => void; // New Prop
 }
 
-const DashboardView: React.FC<DashboardViewProps> = ({ user, onViewReport, onStartNewSearch }) => {
+const DashboardView: React.FC<DashboardViewProps> = ({ user, onViewReport, onStartNewSearch, onCompare }) => {
   const [reports, setReports] = useState<SavedReportItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]); // New State
 
   const fetchReports = async () => {
     setLoading(true);
@@ -31,15 +33,36 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onViewReport, onSta
   }, [user.id]);
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent opening the report
+    e.stopPropagation();
     if (!confirm("Are you sure you want to delete this report?")) return;
     
     const result = await deleteReport(id);
     if (result.success) {
       setReports(reports.filter(r => r.id !== id));
+      setSelectedIds(prev => prev.filter(sid => sid !== id));
     } else {
       alert("Failed to delete report.");
     }
+  };
+
+  const toggleSelection = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (selectedIds.includes(id)) {
+      setSelectedIds(prev => prev.filter(sid => sid !== id));
+    } else {
+      if (selectedIds.length >= 3) {
+        alert("You can compare up to 3 reports at a time.");
+        return;
+      }
+      setSelectedIds(prev => [...prev, id]);
+    }
+  };
+
+  const handleCompareClick = () => {
+    const selectedReports = reports
+      .filter(r => selectedIds.includes(r.id))
+      .map(r => r.report_data);
+    onCompare(selectedReports);
   };
 
   if (loading) {
@@ -82,7 +105,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onViewReport, onSta
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 animate-fade-in">
+    <div className="max-w-6xl mx-auto px-4 py-8 animate-fade-in relative pb-24">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">My Intelligence Hub</h1>
@@ -98,51 +121,89 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onViewReport, onSta
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {reports.map((report) => (
-          <div 
-            key={report.id}
-            onClick={() => onViewReport(report.report_data)}
-            className="group bg-white rounded-xl border border-slate-200 p-5 cursor-pointer hover:border-indigo-300 hover:shadow-md transition-all duration-200 relative overflow-hidden"
-          >
-            <div className={`absolute top-0 left-0 w-1 h-full ${
-              report.overall_score >= 80 ? 'bg-emerald-500' : 
-              report.overall_score >= 60 ? 'bg-amber-500' : 'bg-rose-500'
-            }`}></div>
+        {reports.map((report) => {
+          const isSelected = selectedIds.includes(report.id);
+          return (
+            <div 
+              key={report.id}
+              onClick={() => onViewReport(report.report_data)}
+              className={`group bg-white rounded-xl border p-5 cursor-pointer transition-all duration-200 relative overflow-hidden ${
+                isSelected ? 'border-indigo-500 shadow-md ring-1 ring-indigo-500' : 'border-slate-200 hover:border-indigo-300 hover:shadow-md'
+              }`}
+            >
+              <div className={`absolute top-0 left-0 w-1 h-full ${
+                report.overall_score >= 80 ? 'bg-emerald-500' : 
+                report.overall_score >= 60 ? 'bg-amber-500' : 'bg-rose-500'
+              }`}></div>
 
-            <div className="flex justify-between items-start mb-4">
-              <div className="bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
-                {report.industry || 'Market Report'}
+              <div className="flex justify-between items-start mb-4 pl-2">
+                <div className="bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
+                  {report.industry || 'Market Report'}
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={(e) => toggleSelection(report.id, e)}
+                    className={`p-1 transition-colors ${isSelected ? 'text-indigo-600' : 'text-slate-300 hover:text-indigo-500'}`}
+                    title="Select to Compare"
+                  >
+                    {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
+                  </button>
+                  <button 
+                    onClick={(e) => handleDelete(report.id, e)}
+                    className="text-slate-300 hover:text-rose-500 transition-colors p-1"
+                    title="Delete Report"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
-              <button 
-                onClick={(e) => handleDelete(report.id, e)}
-                className="text-slate-300 hover:text-rose-500 transition-colors p-1"
-                title="Delete Report"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
 
-            <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-1 group-hover:text-indigo-600 transition-colors">
-              {report.keyword}
-            </h3>
+              <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-1 group-hover:text-indigo-600 transition-colors pl-2">
+                {report.keyword}
+              </h3>
 
-            <div className="flex items-center gap-4 text-sm text-slate-500 mb-6">
-              <div className="flex items-center gap-1.5">
-                <TrendingUp size={14} />
-                <span className="font-semibold text-slate-700">{report.overall_score}/100</span>
+              <div className="flex items-center gap-4 text-sm text-slate-500 mb-6 pl-2">
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp size={14} />
+                  <span className="font-semibold text-slate-700">{report.overall_score}/100</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Calendar size={14} />
+                  <span>{new Date(report.created_at).toLocaleDateString()}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <Calendar size={14} />
-                <span>{new Date(report.created_at).toLocaleDateString()}</span>
+
+              <div className="flex items-center text-indigo-600 text-sm font-medium group-hover:translate-x-1 transition-transform duration-200 pl-2">
+                View Report <ArrowRight size={16} className="ml-1" />
               </div>
             </div>
-
-            <div className="flex items-center text-indigo-600 text-sm font-medium group-hover:translate-x-1 transition-transform duration-200">
-              View Report <ArrowRight size={16} className="ml-1" />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
+
+      {/* Floating Comparison Bar */}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-6 z-50 animate-in slide-in-from-bottom-4 fade-in">
+          <span className="font-medium text-sm">{selectedIds.length} Selected</span>
+          <div className="h-4 w-px bg-slate-700"></div>
+          <button 
+            onClick={handleCompareClick}
+            disabled={selectedIds.length < 2}
+            className={`flex items-center gap-2 font-bold text-sm transition-colors ${
+              selectedIds.length < 2 ? 'opacity-50 cursor-not-allowed' : 'hover:text-indigo-300'
+            }`}
+          >
+            <BarChart2 size={18} />
+            Compare
+          </button>
+          <button 
+            onClick={() => setSelectedIds([])}
+            className="text-slate-400 hover:text-white transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
