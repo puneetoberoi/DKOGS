@@ -9,21 +9,19 @@ import { saveReport } from './services/reportService';
 import LoadingScreen from './components/LoadingScreen';
 import ResultsDashboard from './components/ResultsDashboard';
 import TrendingView from './components/TrendingView';
-import DashboardView from './components/DashboardView'; // NEW IMPORT
+import DashboardView from './components/DashboardView';
 import { FirstTimeUserModal } from './components/LegalDisclaimers';
 import { PaymentModal } from './components/PaymentModal';
 import { AuthModal } from './components/AuthModal';
 import { UserMenu } from './components/UserMenu';
 import { useAuth } from './contexts/AuthContext';
-import { Search, Globe, Clock, MapPin, Sliders, ArrowRight, Sparkles, LayoutDashboard, Flame } from 'lucide-react';
+import { Search, Globe, Clock, MapPin, Sliders, ArrowRight, Sparkles, LayoutDashboard, Flame, FolderKanban } from 'lucide-react';
 import {
   getDefaultLocation,
   detectUserLocation,
 } from './utils/currencyDetector';
 import type { LocationData } from './utils/currencyDetector';
 
-// ... (Keep Constants and CustomSelect exactly as is) ...
-// REBRANDED SOURCES
 const AVAILABLE_SOURCES = [
   'Online Communities', 
   'E-commerce Reviews', 
@@ -107,12 +105,14 @@ const App: React.FC = () => {
   const [locationData, setLocationData] = useState<LocationData>(getDefaultLocation());
   const [pendingSave, setPendingSave] = useState(false);
 
+  // PERSISTENCE: Save report to localStorage to survive refresh/redirects
   useEffect(() => {
     if (report) {
       localStorage.setItem('current_report', JSON.stringify(report));
     }
   }, [report]);
 
+  // PERSISTENCE: Restore report on mount
   useEffect(() => {
     const savedReport = localStorage.getItem('current_report');
     const savedIsDemoMode = localStorage.getItem('is_demo_mode');
@@ -121,10 +121,12 @@ const App: React.FC = () => {
       try {
         const parsedReport = JSON.parse(savedReport);
         setReport(parsedReport);
+        // If we have a report, assume analysis is complete
         setStatus(AnalysisStatus.COMPLETE);
         if (savedIsDemoMode) {
           setIsDemoMode(savedIsDemoMode === 'true');
         }
+        console.log('Restored report from local storage');
       } catch (e) {
         console.error('Failed to restore report', e);
       }
@@ -148,13 +150,17 @@ const App: React.FC = () => {
       const pendingAnalysis = sessionStorage.getItem('pendingAnalysis');
       if (pendingAnalysis) {
         const analysisData = JSON.parse(pendingAnalysis);
+        console.log('Running analysis with:', analysisData);
+        
         window.history.replaceState({}, '', window.location.pathname);
+        
         setForm(prev => ({
           ...prev,
           keyword: analysisData.keyword,
           sources: analysisData.sources,
           geography: analysisData.region,
         }));
+        
         runPaidAnalysis(analysisData.keyword, analysisData.sources, analysisData.region, analysisData.gaps);
         sessionStorage.removeItem('pendingAnalysis');
       }
@@ -167,6 +173,7 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // AUTO-SAVE: After login, check if we have a pending save
   useEffect(() => {
     if (user && pendingSave && report) {
       console.log('User logged in, saving pending report...');
@@ -176,7 +183,7 @@ const App: React.FC = () => {
           setPendingSave(false);
         } else {
           console.error('Save failed', result.error);
-          alert("Failed to save report. Please try again.");
+          alert(`Failed to save report: ${typeof result.error === 'object' ? JSON.stringify(result.error) : result.error}`);
         }
       });
     }
@@ -208,7 +215,8 @@ const App: React.FC = () => {
       if (result.success) {
         alert("Report saved to your Dashboard!");
       } else {
-        alert("Failed to save report.");
+        console.error('Manual Save failed', result.error);
+        alert(`Failed to save report: ${typeof result.error === 'object' ? JSON.stringify(result.error) : result.error}`);
       }
     } else {
       setPendingSave(true);
@@ -216,12 +224,12 @@ const App: React.FC = () => {
     }
   };
 
-  // Handle viewing a report from the dashboard
   const handleViewReport = (savedReport: MarketReport) => {
     setReport(savedReport);
+    localStorage.setItem('current_report', JSON.stringify(savedReport)); // Save so it persists
     setStatus(AnalysisStatus.COMPLETE);
-    setActiveTab('search'); // Switch to results view
-    setIsDemoMode(false); // Assuming saved reports are real
+    setActiveTab('search');
+    setIsDemoMode(false);
   };
 
   const handleStartNewSearch = () => {
@@ -251,6 +259,8 @@ const App: React.FC = () => {
       });
       
       setReport(result);
+      // Save immediately to avoid data loss
+      localStorage.setItem('current_report', JSON.stringify(result));
       setStatus(AnalysisStatus.COMPLETE);
       
     } catch (error) {
@@ -309,6 +319,7 @@ const App: React.FC = () => {
       return;
     }
 
+    // Clear persisted report for new scan
     localStorage.removeItem('current_report');
     localStorage.setItem('is_demo_mode', 'true');
 
@@ -323,7 +334,10 @@ const App: React.FC = () => {
       await new Promise(r => setTimeout(r, 600));
       
       const result = generateDemoReport(form.keyword, form.geography);
+      
       setReport(result);
+      // Save immediately
+      localStorage.setItem('current_report', JSON.stringify(result));
       setStatus(AnalysisStatus.COMPLETE);
       
     } catch (error) {
@@ -337,7 +351,7 @@ const App: React.FC = () => {
     setStatus(AnalysisStatus.IDLE);
     setIsDemoMode(false);
     setForm(prev => ({ ...prev, keyword: '' }));
-    localStorage.removeItem('current_report'); 
+    localStorage.removeItem('current_report'); // Clear persisted report
   };
 
   const handleUpgradeToDeepDive = () => {
