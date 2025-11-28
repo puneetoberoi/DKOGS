@@ -22,8 +22,10 @@ interface ResultsDashboardProps {
   onUpgrade?: () => void;
   onSave: () => void;
   onAnalyzeRelated?: (keyword: string) => void;
+  isSaved?: boolean; // NEW PROP
 }
 
+// ... (Keep helpers getCategoryForSource, normalizeScore, DetailModal, StatCard, OpportunityCard exactly as is) ...
 const getCategoryForSource = (source: string): string => {
   const s = source.toLowerCase();
   if (s.includes('reddit') || s.includes('hacker news') || s.includes('forum')) return 'Online Communities';
@@ -167,7 +169,8 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
   isDemoMode = false,
   onUpgrade,
   onSave,
-  onAnalyzeRelated
+  onAnalyzeRelated,
+  isSaved = false // DEFAULT FALSE
 }) => {
   const [modalType, setModalType] = useState<'metrics' | 'competitors' | 'sentiment' | 'score' | null>(null);
   const [activeSources, setActiveSources] = useState<string[]>(report.dataSources || []);
@@ -222,9 +225,17 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
         <div className="flex gap-3">
           <button onClick={onReset} className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">New Search</button>
           {!isDemoMode && (
-            <button onClick={onSave} className="px-6 py-2.5 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex items-center gap-2 transform hover:-translate-y-0.5">
-              <LayoutGrid size={18} />
-              Save to Dashboard
+            <button 
+              onClick={onSave} 
+              disabled={isSaved} // DISABLE IF SAVED
+              className={`px-6 py-2.5 text-sm font-bold text-white rounded-xl transition-all shadow-lg flex items-center gap-2 transform ${
+                isSaved 
+                  ? 'bg-emerald-500 cursor-default shadow-emerald-200' 
+                  : 'bg-indigo-600 hover:bg-indigo-700 hover:-translate-y-0.5 shadow-indigo-200'
+              }`}
+            >
+              {isSaved ? <CheckCircle size={18} /> : <LayoutGrid size={18} />}
+              {isSaved ? "Saved to Dashboard" : "Save to Dashboard"}
             </button>
           )}
           {isDemoMode && onUpgrade && (
