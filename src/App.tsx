@@ -5,7 +5,7 @@ import { AnalysisStatus } from './schema';
 import type { SearchParams, MarketReport } from './schema';
 import { analyzeMarket } from './services/geminiService';
 import { generateDemoReport } from './services/demoService';
-import { saveReport } from './services/reportService';
+import { saveReport, getReportById } from './services/reportService'; // Added getReportById
 import LoadingScreen from './components/LoadingScreen';
 import ResultsDashboard from './components/ResultsDashboard';
 import TrendingView from './components/TrendingView';
@@ -106,16 +106,43 @@ const App: React.FC = () => {
   const [locationData, setLocationData] = useState<LocationData>(getDefaultLocation());
   const [pendingSave, setPendingSave] = useState(false);
   const [comparisonReports, setComparisonReports] = useState<MarketReport[]>([]);
-  
   const [isSaved, setIsSaved] = useState(false);
 
+  // PERSISTENCE: Save to local storage
   useEffect(() => {
     if (report) {
       localStorage.setItem('current_report', JSON.stringify(report));
     }
   }, [report]);
 
+  // PERSISTENCE: Restore on mount OR load from URL ID
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewReportId = urlParams.get('view_report');
+    
+    // PRIORITY 1: Load from URL (Admin/Email Link)
+    if (viewReportId) {
+      console.log('Loading report from URL:', viewReportId);
+      setStatus(AnalysisStatus.SCRAPING); // Fake loading state
+      
+      getReportById(viewReportId).then(result => {
+        if (result.success && result.data) {
+          setReport(result.data as MarketReport);
+          setStatus(AnalysisStatus.COMPLETE);
+          setIsDemoMode(false);
+          setIsSaved(true); // Loaded from DB, so it is saved
+          // Clean URL
+          window.history.replaceState({}, '', window.location.pathname);
+        } else {
+          console.error('Failed to load report from URL');
+          alert("Could not load report. It may have been deleted or you don't have permission.");
+          setStatus(AnalysisStatus.IDLE);
+        }
+      });
+      return; // Skip local storage check if URL present
+    }
+
+    // PRIORITY 2: Load from Local Storage (Refresh)
     const savedReport = localStorage.getItem('current_report');
     const savedIsDemoMode = localStorage.getItem('is_demo_mode');
     
@@ -245,7 +272,6 @@ const App: React.FC = () => {
     return true;
   };
 
-  // FIX: Analyze Related now forces Deep Dive
   const handleAnalyzeRelated = (keyword: string) => {
     if (!confirmReset()) return;
 
@@ -258,7 +284,7 @@ const App: React.FC = () => {
     setForm(prev => ({ 
       ...prev, 
       keyword,
-      depth: 'Deep Dive' // FORCE DEEP DIVE
+      depth: 'Deep Dive'
     }));
     setActiveTab('search');
   };
@@ -403,7 +429,7 @@ const App: React.FC = () => {
           onUpgrade={handleUpgradeToDeepDive}
           onSave={handleSaveReport}
           onAnalyzeRelated={handleAnalyzeRelated}
-          isSaved={isSaved} // PASS PROP
+          isSaved={isSaved}
         />
       );
     }
