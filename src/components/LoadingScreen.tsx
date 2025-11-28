@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { AnalysisStatus } from '../schema';
-import { Loader2, Database, BrainCircuit, Target, MessageSquare, Cpu, CheckCircle2 } from 'lucide-react';
+import { Database, BrainCircuit, Target, MessageSquare, Cpu } from 'lucide-react';
 
 interface LoadingScreenProps {
   status: AnalysisStatus;
@@ -12,9 +12,8 @@ interface LoadingScreenProps {
 
 const LoadingScreen: React.FC<LoadingScreenProps> = ({ status, useGroq, useBytez }) => {
   
-  // Define the sequence of steps based on configuration
   const steps = useMemo(() => {
-    // Explicitly type the array so TS knows 'id' can be any AnalysisStatus
+    // Fix: Use 'AnalysisStatus' type instead of 'string' to satisfy TypeScript
     const baseSteps: Array<{ id: AnalysisStatus; label: string; icon: React.ComponentType<any> }> = [
       { id: AnalysisStatus.SCRAPING, label: "Scraping Sources", icon: Database },
     ];
@@ -35,98 +34,62 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ status, useGroq, useBytez
     return baseSteps;
   }, [useGroq, useBytez]);
 
-  // Find index of current status
-  const currentStepIndex = steps.findIndex(step => step.id === status);
-  
-  // Calculate progress percentage
-  // If status is COMPLETE, progress is 100%
-  // If status is not found (e.g. IDLE or ERROR), keep 0
-  let progress = 0;
-  if (status === AnalysisStatus.COMPLETE) {
-    progress = 100;
-  } else if (currentStepIndex !== -1) {
-    // Calculate progress based on step index (e.g. step 0 of 4 = 12.5%, step 1 = 37.5%)
-    progress = Math.max(5, ((currentStepIndex + 0.5) / steps.length) * 100);
-  }
-
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 animate-fade-in">
-      <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
-        
-        {/* Spinner & Title */}
-        <div className="text-center mb-8">
-          <div className="relative inline-block mb-4">
-            <div className="absolute inset-0 bg-indigo-100 rounded-full animate-ping opacity-75"></div>
-            <div className="relative bg-white p-3 rounded-full shadow-sm border border-indigo-50">
-              <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-            </div>
-          </div>
-          <h2 className="text-xl font-bold text-slate-900">Analyzing Market Data</h2>
-          <p className="text-slate-500 text-sm mt-1">Our AI is identifying profitable gaps...</p>
-        </div>
+    <div className="w-full max-w-2xl mx-auto py-16 px-4 flex flex-col items-center justify-center animate-fade-in">
+      <div className="mb-8 relative">
+        <div className="absolute inset-0 bg-indigo-500 blur-2xl opacity-10 rounded-full animate-pulse"></div>
+        <BrainCircuit size={64} className="text-indigo-600 relative z-10 animate-bounce" />
+      </div>
+      
+      <h2 className="text-2xl font-bold text-slate-800 mb-2">Generating Gap Report</h2>
+      <p className="text-slate-500 mb-12 text-center max-w-md">
+        GapSpotter is orchestrating multiple AI models to find your next business opportunity.
+      </p>
 
-        {/* Progress Bar */}
-        <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-8">
-          <div 
-            className="h-full bg-indigo-600 rounded-full transition-all duration-700 ease-out relative overflow-hidden"
-            style={{ width: `${progress}%` }}
-          >
-            <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite] -skew-x-12 transform origin-left"></div>
-          </div>
-        </div>
-
-        {/* Steps List */}
-        <div className="space-y-4">
-          {steps.map((step, index) => {
-            // Determine step state
-            let state: 'waiting' | 'current' | 'completed' = 'waiting';
-            
-            if (status === AnalysisStatus.COMPLETE) {
-              state = 'completed';
-            } else if (currentStepIndex === -1) {
-              state = 'waiting';
-            } else if (index < currentStepIndex) {
-              state = 'completed';
-            } else if (index === currentStepIndex) {
-              state = 'current';
-            }
-
-            return (
-              <div 
-                key={step.id} 
-                className={`flex items-center transition-all duration-500 ${
-                  state === 'waiting' ? 'opacity-40' : 'opacity-100'
-                }`}
-              >
-                <div className={`
-                  w-8 h-8 rounded-full flex items-center justify-center mr-3 border-2 transition-colors duration-300
-                  ${state === 'completed' ? 'bg-emerald-50 border-emerald-500 text-emerald-600' : 
-                    state === 'current' ? 'bg-indigo-50 border-indigo-600 text-indigo-600' : 
-                    'bg-white border-slate-200 text-slate-300'}
-                `}>
-                  {state === 'completed' ? (
-                    <CheckCircle2 className="w-4 h-4" />
-                  ) : (
-                    <step.icon className={`w-4 h-4 ${state === 'current' ? 'animate-pulse' : ''}`} />
-                  )}
-                </div>
-                <span className={`text-sm font-medium ${
-                  state === 'completed' ? 'text-emerald-700' : 
-                  state === 'current' ? 'text-indigo-700' : 
-                  'text-slate-500'
-                }`}>
-                  {step.label}
-                </span>
-                {state === 'current' && (
-                  <span className="ml-auto text-xs text-indigo-500 font-semibold animate-pulse">
-                    Processing...
+      <div className="w-full space-y-4">
+        {steps.map((step, index) => {
+          const Icon = step.icon;
+          const isActive = status === step.id;
+          
+          // Calculate completion based on step order in the dynamic list
+          const currentStepIndex = steps.findIndex(s => s.id === status);
+          const stepIndex = index;
+          // Fix: Logic to determine if step is done
+          // If status is COMPLETE, all steps are done.
+          // If current step index > this step index, this step is done.
+          const isCompleted = status === AnalysisStatus.COMPLETE || (currentStepIndex > -1 && currentStepIndex > stepIndex);
+          
+          return (
+            <div 
+              key={step.id}
+              className={`flex items-center p-4 rounded-lg border transition-all duration-500 ${
+                isActive 
+                  ? 'bg-indigo-50 border-indigo-200 scale-105 shadow-md' 
+                  : isCompleted 
+                    ? 'bg-white border-slate-100 opacity-50'
+                    : 'bg-white border-slate-100 opacity-30'
+              }`}
+            >
+              <div className={`p-2 rounded-full mr-4 ${isActive ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                <Icon size={20} />
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between mb-1">
+                  <span className={`font-medium ${isActive ? 'text-indigo-900' : 'text-slate-500'}`}>
+                    {step.label}
                   </span>
+                  {isActive && <span className="text-xs text-indigo-600 font-mono animate-pulse">PROCESSING...</span>}
+                  {isCompleted && <span className="text-xs text-emerald-600 font-mono">DONE</span>}
+                </div>
+                {isActive && (
+                  <div className="h-1.5 w-full bg-indigo-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-indigo-600 rounded-full w-1/2 animate-pulse"></div>
+                  </div>
                 )}
               </div>
-            );
-          })}
-        </div>
-
+            </div>
+          );
+        })}
       </div>
     </div>
   );
