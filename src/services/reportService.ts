@@ -12,18 +12,30 @@ export interface SavedReportItem {
   report_data: MarketReport;
 }
 
+// Helper to call email API
+async function sendReportEmail(email: string, keyword: string, reportId: string) {
+  try {
+    await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, keyword, reportId }),
+    });
+  } catch (e) {
+    console.warn('Failed to trigger email:', e);
+  }
+}
+
 export const saveReport = async (userId: string, report: MarketReport) => {
   try {
     console.log('Attempting to save report for user:', userId);
     
-    // 1. Check session first
+    // 1. Check session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      console.error('No active session');
-      return { success: false, error: 'User not authenticated (No Session)' };
+      return { success: false, error: 'User not authenticated' };
     }
 
-    // 2. Check if profile exists
+    // 2. Check profile (Fallback creation)
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id')
@@ -31,15 +43,7 @@ export const saveReport = async (userId: string, report: MarketReport) => {
       .single();
     
     if (!profile || profileError) {
-      console.warn('Profile missing, attempting to create...');
-      // Try to create profile if missing (Fallback)
-      const { error: createError } = await supabase
-        .from('profiles')
-        .insert({ id: userId, email: session.user.email });
-        
-      if (createError) {
-        console.error('Failed to create fallback profile:', createError);
-      }
+      await supabase.from('profiles').insert({ id: userId, email: session.user.email });
     }
 
     // 3. Insert Report
@@ -61,16 +65,23 @@ export const saveReport = async (userId: string, report: MarketReport) => {
 
     if (error) {
       console.error('Supabase Insert Error:', error);
-      return { success: false, error: error.message || 'Database Insert Failed' };
+      return { success: false, error: error.message };
+    }
+
+    // 4. TRIGGER EMAIL (New)
+    if (session.user.email) {
+      // Fire and forget (don't await)
+      sendReportEmail(session.user.email, report.keyword, data.id);
     }
     
     return { success: true, data };
   } catch (error: any) {
-    console.error('Unexpected error saving report:', error);
-    return { success: false, error: error.message || 'Unexpected Error' };
+    console.error('Unexpected error:', error);
+    return { success: false, error: error.message };
   }
 };
 
+// ... (Keep getSavedReports and deleteReport exactly as is) ...
 export const getSavedReports = async (userId: string) => {
   try {
     const { data, error } = await supabase
