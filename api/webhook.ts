@@ -1,8 +1,8 @@
 import Stripe from 'stripe';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-05-28.basil',
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2024-06-20',
 });
 
 export const config = {
@@ -28,7 +28,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!webhookSecret) {
-    console.error('Missing STRIPE_WEBHOOK_SECRET');
     return res.status(500).json({ error: 'Webhook not configured' });
   }
 
@@ -36,18 +35,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const buf = await buffer(req);
     const event = stripe.webhooks.constructEvent(buf, sig, webhookSecret);
 
-    console.log('Webhook event:', event.type);
-
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       console.log('Payment completed:', session.id);
-      console.log('Metadata:', session.metadata);
     }
 
     return res.status(200).json({ received: true });
-  } catch (err: unknown) {
+  } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('Webhook error:', message);
     return res.status(400).json({ error: message });
   }
 }
