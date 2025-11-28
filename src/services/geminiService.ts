@@ -143,8 +143,10 @@ export const analyzeMarket = async (
       6. Scores: All scores must be integers between 0-100.
       7. Focus analysis on ${params.geography} market specifically.
       8. Include regulatory/compliance considerations for ${params.geography}.
-      9. Search Volume: Must be a number or range (e.g., "10k-50k/mo"), NOT "High/Medium/Low".
-      10. Sources: Return ONLY the platform name (e.g., "YouTube", "Reddit"), NOT full URLs.
+      
+      FORMATTING RULES:
+      9. SEARCH VOLUME: Must be a specific number or range string (e.g., "12,500/mo" or "10k-50k/mo"). DO NOT use vague terms like "High", "Medium", "Low". Estimate based on market data if exact number unavailable.
+      10. SOURCES: Return ONLY the platform name (e.g., "YouTube", "Reddit", "TechCrunch"), NOT full URLs. Group multiple URLs into their platform name.
     `;
 
     const schema = {
