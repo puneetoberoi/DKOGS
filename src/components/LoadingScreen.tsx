@@ -14,7 +14,8 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ status, useGroq, useBytez
   
   // Define the sequence of steps based on configuration
   const steps = useMemo(() => {
-    const baseSteps = [
+    // Explicitly type the array so TS knows 'id' can be any AnalysisStatus
+    const baseSteps: Array<{ id: AnalysisStatus; label: string; icon: React.ComponentType<any> }> = [
       { id: AnalysisStatus.SCRAPING, label: "Scraping Sources", icon: Database },
     ];
     
@@ -35,16 +36,16 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ status, useGroq, useBytez
   }, [useGroq, useBytez]);
 
   // Find index of current status
-  const currentStepIndex = steps.findIndex(s => s.id === status);
+  const currentStepIndex = steps.findIndex(step => step.id === status);
   
   // Calculate progress percentage
   // If status is COMPLETE, progress is 100%
-  // If status is ERROR, keep current progress
-  // If status is not found (e.g. IDLE), progress is 0
+  // If status is not found (e.g. IDLE or ERROR), keep 0
   let progress = 0;
   if (status === AnalysisStatus.COMPLETE) {
     progress = 100;
   } else if (currentStepIndex !== -1) {
+    // Calculate progress based on step index (e.g. step 0 of 4 = 12.5%, step 1 = 37.5%)
     progress = Math.max(5, ((currentStepIndex + 0.5) / steps.length) * 100);
   }
 
@@ -131,4 +132,4 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ status, useGroq, useBytez
   );
 };
 
-export default LoadingScreen;s
+export default LoadingScreen;
