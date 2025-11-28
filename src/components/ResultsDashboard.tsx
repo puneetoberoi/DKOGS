@@ -315,8 +315,6 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
 
       {/* DATA TRANSPARENCY BANNER */}
       <DataTransparencyBanner /> 
-        //totalDataPoints={report.totalAnalyzed} 
-        //sources={report.dataSources || []} 
 
       {/* STATS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
