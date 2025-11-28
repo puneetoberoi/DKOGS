@@ -5,16 +5,15 @@ import { AnalysisStatus } from './schema';
 import type { SearchParams, MarketReport } from './schema';
 import { analyzeMarket } from './services/geminiService';
 import { generateDemoReport } from './services/demoService';
+import { saveReport } from './services/reportService'; // NEW IMPORT
 import LoadingScreen from './components/LoadingScreen';
 import ResultsDashboard from './components/ResultsDashboard';
 import TrendingView from './components/TrendingView';
 import { FirstTimeUserModal } from './components/LegalDisclaimers';
 import { PaymentModal } from './components/PaymentModal';
-// --- NEW IMPORTS ---
 import { AuthModal } from './components/AuthModal';
 import { UserMenu } from './components/UserMenu';
 import { useAuth } from './contexts/AuthContext';
-// -------------------
 import { Search, Globe, Clock, MapPin, Sliders, ArrowRight, Sparkles, LayoutDashboard, Flame, FolderKanban } from 'lucide-react';
 import {
   getDefaultLocation,
@@ -22,7 +21,7 @@ import {
 } from './utils/currencyDetector';
 import type { LocationData } from './utils/currencyDetector';
 
-// ... (Keep ALL constants and CustomSelect component exactly as they are) ...
+// ... (Keep AVAILABLE_SOURCES, AVAILABLE_REGIONS, LOOKBACK_OPTIONS, DEPTH_OPTIONS, CustomSelect exactly as is) ...
 // REBRANDED SOURCES
 const AVAILABLE_SOURCES = [
   'Online Communities', 
@@ -104,70 +103,73 @@ const CustomSelect: React.FC<SelectProps> = ({ value, onChange, options, disable
 // MAIN APP COMPONENT
 // ============================================
 const App: React.FC = () => {
-  const { user } = useAuth(); // Hook into Auth state
+  const { user } = useAuth(); 
   const [status, setStatus] = useState<AnalysisStatus>(AnalysisStatus.IDLE);
   const [report, setReport] = useState<MarketReport | null>(null);
-  // Added 'dashboard' to activeTab type
   const [activeTab, setActiveTab] = useState<'search' | 'trending' | 'dashboard'>('search');
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
 
   // Payment & Location state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false); // Auth Modal state
+  const [showAuthModal, setShowAuthModal] = useState(false); 
   const [locationData, setLocationData] = useState<LocationData>(getDefaultLocation());
   
+  // NEW: Pending Save State
+  const [pendingSave, setPendingSave] = useState(false);
+
   // ... (Keep useEffects for Legal/Location/Payment logic exactly as they are) ...
-  // Check for first-time user AND payment success on mount
   useEffect(() => {
     const hasSeenLegal = localStorage.getItem('gapspotter_legal_accepted');
     if (!hasSeenLegal) {
       setShowLegalModal(true);
     } else {
-      // If legal already accepted, detect location
       detectUserLocation().then(setLocationData).catch(() => setLocationData(getDefaultLocation()));
     }
 
-    // Check if returning from successful payment
     const urlParams = new URLSearchParams(window.location.search);
     const success = urlParams.get('success');
     const sessionId = urlParams.get('session_id');
 
     if (success === 'true' && sessionId) {
       console.log('Payment successful! Session:', sessionId);
-      
-      // Get pending analysis from sessionStorage
       const pendingAnalysis = sessionStorage.getItem('pendingAnalysis');
       if (pendingAnalysis) {
         const analysisData = JSON.parse(pendingAnalysis);
         console.log('Running analysis with:', analysisData);
-        
-        // Clear the URL params
         window.history.replaceState({}, '', window.location.pathname);
-        
-        // Set form data and run analysis
         setForm(prev => ({
           ...prev,
           keyword: analysisData.keyword,
           sources: analysisData.sources,
           geography: analysisData.region,
         }));
-        
-        // Run the analysis
         runPaidAnalysis(analysisData.keyword, analysisData.sources, analysisData.region, analysisData.gaps);
-        
-        // Clear sessionStorage
         sessionStorage.removeItem('pendingAnalysis');
       }
     }
 
-    // Check if payment was canceled
     const canceled = urlParams.get('canceled');
     if (canceled === 'true') {
       console.log('Payment was canceled');
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
+
+  // NEW EFFECT: Handle Auto-Save after Login
+  useEffect(() => {
+    if (user && pendingSave && report) {
+      console.log('User logged in, saving pending report...');
+      saveReport(user.id, report).then(result => {
+        if (result.success) {
+          alert("Report saved to your Dashboard!"); // Simple feedback for MVP
+          setPendingSave(false);
+        } else {
+          alert("Failed to save report.");
+        }
+      });
+    }
+  }, [user, pendingSave, report]);
 
   const handleLegalAccept = async (locationConsent: boolean) => {
     localStorage.setItem('gapspotter_legal_accepted', 'true');
@@ -189,7 +191,26 @@ const App: React.FC = () => {
     }
   };
 
-  // Run analysis after successful payment
+  // NEW: Handle Save Report Action
+  const handleSaveReport = async () => {
+    if (!report) return;
+
+    if (user) {
+      // User is logged in, save directly
+      const result = await saveReport(user.id, report);
+      if (result.success) {
+        alert("Report saved to your Dashboard!"); // Simple feedback for MVP
+      } else {
+        alert("Failed to save report.");
+      }
+    } else {
+      // User is guest, prompt auth
+      setPendingSave(true);
+      setShowAuthModal(true);
+    }
+  };
+
+  // ... (Keep runPaidAnalysis, handlePaymentSuccess, handleInputChange, etc. exactly as is) ...
   const runPaidAnalysis = async (keyword: string, sources: string[], region: string, gaps: number) => {
     console.log(`🎯 Starting PAID analysis for: "${keyword}" with ${gaps} gaps`);
     
@@ -223,13 +244,11 @@ const App: React.FC = () => {
     }
   };
 
-  // Payment success handler (called from PaymentModal)
   const handlePaymentSuccess = (gaps: number) => {
     setShowPaymentModal(false);
     runPaidAnalysis(form.keyword, form.sources, form.geography, gaps);
   };
   
-  // Form state
   const [form, setForm] = useState<SearchParams>({
     keyword: '',
     sources: ['Online Communities', 'E-commerce Reviews', 'Social Media'],
@@ -240,7 +259,6 @@ const App: React.FC = () => {
     useBytez: true
   });
   
-  // Derived state
   const isQuickScan = form.depth === 'Quick Scan';
   const hasKeyword = form.keyword.trim().length > 0;
 
@@ -264,7 +282,6 @@ const App: React.FC = () => {
     setActiveTab('search');
   };
 
-  // Main analysis function
   const runAnalysis = useCallback(async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
@@ -276,13 +293,11 @@ const App: React.FC = () => {
     console.log(`🎯 Starting analysis for: "${form.keyword}"`);
     console.log(`📊 Mode: ${isQuickScan ? 'Quick Scan (Demo)' : 'Deep Dive (Real)'}`);
 
-    // If Deep Dive, show payment modal
     if (!isQuickScan) {
       setShowPaymentModal(true);
       return;
     }
 
-    // Quick Scan - run demo
     setStatus(AnalysisStatus.SCRAPING);
     setIsDemoMode(true);
 
@@ -329,6 +344,7 @@ const App: React.FC = () => {
           onReset={handleReset} 
           isDemoMode={isDemoMode}
           onUpgrade={handleUpgradeToDeepDive}
+          onSave={handleSaveReport} // PASS THE HANDLER
         />
       );
     }
@@ -337,7 +353,7 @@ const App: React.FC = () => {
       return <LoadingScreen status={status} useGroq={form.useGroq} useBytez={form.useBytez} />;
     }
 
-    // ... (Keep Return JSX for form input exactly as is) ...
+    // ... (Keep the Search Form JSX exactly as is) ...
     return (
       <div className="flex-1 flex items-center justify-center p-3 sm:p-4 w-full">
         <div className="max-w-xl w-full space-y-5 sm:space-y-8">
@@ -485,7 +501,7 @@ const App: React.FC = () => {
     );
   };
 
-  // Dashboard Placeholder (New)
+  // Dashboard Placeholder
   const DashboardContent = () => (
     <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500">
       <div className="bg-slate-100 p-6 rounded-full mb-4">
@@ -505,7 +521,7 @@ const App: React.FC = () => {
     </div>
   );
 
-  // Main Render
+  // ... (Keep Main Render return exactly as is) ...
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Legal Modal */}
@@ -525,7 +541,7 @@ const App: React.FC = () => {
         }}
       />
 
-      {/* Auth Modal (New) */}
+      {/* Auth Modal */}
       <AuthModal 
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)} 
@@ -563,7 +579,7 @@ const App: React.FC = () => {
               </button>
             </nav>
 
-            {/* User Menu or Sign In (New) */}
+            {/* User Menu or Sign In */}
             {user ? (
               <UserMenu 
                 user={user} 
