@@ -14,43 +14,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const forwardedFor = req.headers['x-forwarded-for'];
-  const ip = typeof forwardedFor === 'string'
-    ? forwardedFor.split(',')[0].trim()
-    : '';
-
-  console.log('Detecting location for IP:', ip);
+  const realIp = req.headers['x-real-ip'];
+  
+  let ip = '';
+  if (typeof forwardedFor === 'string') {
+    ip = forwardedFor.split(',')[0].trim();
+  } else if (typeof realIp === 'string') {
+    ip = realIp;
+  }
 
   // Default response
-  let result = {
+  const defaultResult = {
     country: 'United States',
     countryCode: 'US',
-    currency: 'USD' as const,
+    currency: 'USD',
     source: 'default',
   };
 
   if (!ip || ip === '127.0.0.1' || ip === '::1') {
-    console.log('Local IP, returning default');
-    return res.status(200).json(result);
+    return res.status(200).json(defaultResult);
   }
 
   try {
     const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode`);
     const data = await response.json();
 
-    console.log('IP API response:', data);
-
     if (data.status === 'success') {
-      result = {
+      return res.status(200).json({
         country: data.country,
         countryCode: data.countryCode,
         currency: data.countryCode === 'CA' ? 'CAD' : 'USD',
         source: 'ip-api',
-      };
+      });
     }
   } catch (error) {
-    console.error('Location detection error:', error);
+    console.error('Location error:', error);
   }
 
-  console.log('Returning:', result);
-  return res.status(200).json(result);
+  return res.status(200).json(defaultResult);
 }
