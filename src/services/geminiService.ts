@@ -137,6 +137,7 @@ export const analyzeMarket = async (
       FORMATTING RULES:
       9. SEARCH VOLUME: Must be a specific number or range string (e.g., "12,500/mo" or "10k-50k/mo"). DO NOT use vague terms like "High", "Medium", "Low". Estimate based on market data if exact number unavailable.
       10. SOURCES: Return ONLY the platform name (e.g., "YouTube", "Reddit", "TechCrunch"), NOT full URLs. Group multiple URLs into their platform name.
+      11. RECOMMENDATIONS: Suggest 3 specific, related niche market keywords that an entrepreneur should analyze next. Include a short reason why.
     `;
 
     const schema = {
@@ -199,6 +200,17 @@ export const analyzeMarket = async (
           }
         },
         summary: { type: Type.STRING },
+        relatedOpportunities: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              keyword: { type: Type.STRING },
+              reason: { type: Type.STRING }
+            },
+            required: ["keyword", "reason"]
+          }
+        },
         gaps: {
           type: Type.ARRAY,
           items: {
@@ -220,7 +232,7 @@ export const analyzeMarket = async (
           }
         }
       },
-      required: ["industry", "totalAnalyzed", "overallSentiment", "sentimentBreakdown", "sentimentFactors", "analyzedSamples", "competitors", "marketTrends", "gaps", "summary"]
+      required: ["industry", "totalAnalyzed", "overallSentiment", "sentimentBreakdown", "sentimentFactors", "analyzedSamples", "competitors", "marketTrends", "gaps", "summary", "relatedOpportunities"]
     };
 
     if (onStatusUpdate) onStatusUpdate(AnalysisStatus.SCORING);
@@ -240,7 +252,6 @@ export const analyzeMarket = async (
 
     const result = JSON.parse(response.text) as MarketReport;
     
-    // Inject required fields
     result.keyword = params.keyword;
     result.totalAnalyzed = realData.totalDataPoints; 
     result.dataSources = usedSources.concat(params.sources); 
