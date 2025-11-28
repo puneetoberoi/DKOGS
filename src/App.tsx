@@ -10,6 +10,7 @@ import LoadingScreen from './components/LoadingScreen';
 import ResultsDashboard from './components/ResultsDashboard';
 import TrendingView from './components/TrendingView';
 import DashboardView from './components/DashboardView';
+import ComparisonView from './components/ComparisonView'; // NEW IMPORT
 import { FirstTimeUserModal } from './components/LegalDisclaimers';
 import { PaymentModal } from './components/PaymentModal';
 import { AuthModal } from './components/AuthModal';
@@ -22,6 +23,7 @@ import {
 } from './utils/currencyDetector';
 import type { LocationData } from './utils/currencyDetector';
 
+// ... (Keep Constants and CustomSelect exactly as is) ...
 const AVAILABLE_SOURCES = [
   'Online Communities', 
   'E-commerce Reviews', 
@@ -96,7 +98,7 @@ const App: React.FC = () => {
   const { user } = useAuth(); 
   const [status, setStatus] = useState<AnalysisStatus>(AnalysisStatus.IDLE);
   const [report, setReport] = useState<MarketReport | null>(null);
-  const [activeTab, setActiveTab] = useState<'search' | 'trending' | 'dashboard'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'trending' | 'dashboard' | 'comparison'>('search'); // Added comparison
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
 
@@ -104,6 +106,9 @@ const App: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false); 
   const [locationData, setLocationData] = useState<LocationData>(getDefaultLocation());
   const [pendingSave, setPendingSave] = useState(false);
+  
+  // NEW: State for Comparison
+  const [comparisonReports, setComparisonReports] = useState<MarketReport[]>([]);
 
   useEffect(() => {
     if (report) {
@@ -226,15 +231,47 @@ const App: React.FC = () => {
     setIsDemoMode(false);
   };
 
+  // NEW: Handle comparison logic
+  const handleCompare = (reports: MarketReport[]) => {
+    setComparisonReports(reports);
+    setActiveTab('comparison');
+  };
+
+  // FIX: Handle analyze related logic
   const handleAnalyzeRelated = (keyword: string) => {
+    // Don't call handleReset because it clears the form we just set
+    setReport(null);
+    setStatus(AnalysisStatus.IDLE);
+    setIsDemoMode(false);
+    localStorage.removeItem('current_report');
+    
     setForm(prev => ({ ...prev, keyword }));
-    handleReset();
     setActiveTab('search');
   };
 
   const handleStartNewSearch = () => {
     handleReset();
     setActiveTab('search');
+  };
+
+  // FIX: Reset with confirmation
+  const confirmReset = () => {
+    // If we have a report, it's not demo, and it's not saved (user is null check as proxy for simplicity)
+    // A better check would be tracking if current report is saved
+    if (report && !isDemoMode && !user) {
+       return window.confirm("You have an active report. Discard it to start a new search?");
+    }
+    return true;
+  };
+
+  const handleReset = () => {
+    if (!confirmReset()) return;
+    
+    setReport(null);
+    setStatus(AnalysisStatus.IDLE);
+    setIsDemoMode(false);
+    setForm(prev => ({ ...prev, keyword: '' }));
+    localStorage.removeItem('current_report'); 
   };
 
   const runPaidAnalysis = async (keyword: string, sources: string[], region: string, gaps: number) => {
@@ -342,14 +379,6 @@ const App: React.FC = () => {
       setTimeout(() => setStatus(AnalysisStatus.IDLE), 3000);
     }
   }, [form, isQuickScan, hasKeyword]); 
-
-  const handleReset = () => {
-    setReport(null);
-    setStatus(AnalysisStatus.IDLE);
-    setIsDemoMode(false);
-    setForm(prev => ({ ...prev, keyword: '' }));
-    localStorage.removeItem('current_report'); 
-  };
 
   const handleUpgradeToDeepDive = () => {
     setForm(prev => ({ ...prev, depth: 'Deep Dive' }));
@@ -590,6 +619,7 @@ const App: React.FC = () => {
               user={user} 
               onViewReport={handleViewReport} 
               onStartNewSearch={handleStartNewSearch}
+              onCompare={handleCompare} // Pass handler
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-96 text-center">
@@ -602,6 +632,11 @@ const App: React.FC = () => {
               </button>
             </div>
           )
+        ) : activeTab === 'comparison' ? ( // NEW VIEW
+          <ComparisonView 
+            reports={comparisonReports} 
+            onBack={() => setActiveTab('dashboard')} 
+          />
         ) : (
           <SearchContent />
         )}
