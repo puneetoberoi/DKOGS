@@ -10,7 +10,7 @@ import LoadingScreen from './components/LoadingScreen';
 import ResultsDashboard from './components/ResultsDashboard';
 import TrendingView from './components/TrendingView';
 import DashboardView from './components/DashboardView';
-import ComparisonView from './components/ComparisonView'; // NEW IMPORT
+import ComparisonView from './components/ComparisonView';
 import { FirstTimeUserModal } from './components/LegalDisclaimers';
 import { PaymentModal } from './components/PaymentModal';
 import { AuthModal } from './components/AuthModal';
@@ -23,7 +23,6 @@ import {
 } from './utils/currencyDetector';
 import type { LocationData } from './utils/currencyDetector';
 
-// ... (Keep Constants and CustomSelect exactly as is) ...
 const AVAILABLE_SOURCES = [
   'Online Communities', 
   'E-commerce Reviews', 
@@ -98,7 +97,7 @@ const App: React.FC = () => {
   const { user } = useAuth(); 
   const [status, setStatus] = useState<AnalysisStatus>(AnalysisStatus.IDLE);
   const [report, setReport] = useState<MarketReport | null>(null);
-  const [activeTab, setActiveTab] = useState<'search' | 'trending' | 'dashboard' | 'comparison'>('search'); // Added comparison
+  const [activeTab, setActiveTab] = useState<'search' | 'trending' | 'dashboard' | 'comparison'>('search');
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
 
@@ -106,9 +105,10 @@ const App: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false); 
   const [locationData, setLocationData] = useState<LocationData>(getDefaultLocation());
   const [pendingSave, setPendingSave] = useState(false);
-  
-  // NEW: State for Comparison
   const [comparisonReports, setComparisonReports] = useState<MarketReport[]>([]);
+  
+  // NEW: Track if report is saved
+  const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
     if (report) {
@@ -179,6 +179,7 @@ const App: React.FC = () => {
         if (result.success) {
           alert("Report saved to your Dashboard!");
           setPendingSave(false);
+          setIsSaved(true); // MARK AS SAVED
         } else {
           console.error('Save failed', result.error);
           alert(`Failed to save report: ${typeof result.error === 'object' ? JSON.stringify(result.error) : result.error}`);
@@ -213,6 +214,7 @@ const App: React.FC = () => {
       const result = await saveReport(user.id, reportToSave);
       if (result.success) {
         alert("Report saved to your Dashboard!");
+        setIsSaved(true); // MARK AS SAVED
       } else {
         console.error('Manual Save failed', result.error);
         alert(`Failed to save report: ${typeof result.error === 'object' ? JSON.stringify(result.error) : result.error}`);
@@ -229,20 +231,29 @@ const App: React.FC = () => {
     setStatus(AnalysisStatus.COMPLETE);
     setActiveTab('search');
     setIsDemoMode(false);
+    setIsSaved(true); // Saved because it came from dashboard
   };
 
-  // NEW: Handle comparison logic
   const handleCompare = (reports: MarketReport[]) => {
     setComparisonReports(reports);
     setActiveTab('comparison');
   };
 
-  // FIX: Handle analyze related logic
+  // Confirmation Logic
+  const confirmReset = () => {
+    if (report && !isDemoMode && !isSaved) {
+       return window.confirm("You have unsaved analysis. Discarding will lose this data forever. Continue?");
+    }
+    return true;
+  };
+
   const handleAnalyzeRelated = (keyword: string) => {
-    // Don't call handleReset because it clears the form we just set
+    if (!confirmReset()) return;
+
     setReport(null);
     setStatus(AnalysisStatus.IDLE);
     setIsDemoMode(false);
+    setIsSaved(false);
     localStorage.removeItem('current_report');
     
     setForm(prev => ({ ...prev, keyword }));
@@ -250,26 +261,16 @@ const App: React.FC = () => {
   };
 
   const handleStartNewSearch = () => {
+    if (!confirmReset()) return;
     handleReset();
     setActiveTab('search');
   };
 
-  // FIX: Reset with confirmation
-  const confirmReset = () => {
-    // If we have a report, it's not demo, and it's not saved (user is null check as proxy for simplicity)
-    // A better check would be tracking if current report is saved
-    if (report && !isDemoMode && !user) {
-       return window.confirm("You have an active report. Discard it to start a new search?");
-    }
-    return true;
-  };
-
   const handleReset = () => {
-    if (!confirmReset()) return;
-    
     setReport(null);
     setStatus(AnalysisStatus.IDLE);
     setIsDemoMode(false);
+    setIsSaved(false);
     setForm(prev => ({ ...prev, keyword: '' }));
     localStorage.removeItem('current_report'); 
   };
@@ -277,6 +278,7 @@ const App: React.FC = () => {
   const runPaidAnalysis = async (keyword: string, sources: string[], region: string, gaps: number) => {
     setStatus(AnalysisStatus.SCRAPING);
     setIsDemoMode(false);
+    setIsSaved(false); // Reset save state for new report
     localStorage.setItem('is_demo_mode', 'false');
 
     try {
@@ -355,11 +357,14 @@ const App: React.FC = () => {
       return;
     }
 
+    if (!confirmReset()) return; // Warn if discarding current report
+
     localStorage.removeItem('current_report');
     localStorage.setItem('is_demo_mode', 'true');
 
     setStatus(AnalysisStatus.SCRAPING);
     setIsDemoMode(true);
+    setIsSaved(false);
 
     try {
       await new Promise(r => setTimeout(r, 1000));
@@ -378,7 +383,7 @@ const App: React.FC = () => {
       setStatus(AnalysisStatus.ERROR);
       setTimeout(() => setStatus(AnalysisStatus.IDLE), 3000);
     }
-  }, [form, isQuickScan, hasKeyword]); 
+  }, [form, isQuickScan, hasKeyword, isSaved, report]); // Added deps
 
   const handleUpgradeToDeepDive = () => {
     setForm(prev => ({ ...prev, depth: 'Deep Dive' }));
@@ -390,7 +395,7 @@ const App: React.FC = () => {
       return (
         <ResultsDashboard 
           report={report} 
-          onReset={handleReset} 
+          onReset={handleStartNewSearch} // Use wrapper to prompt
           isDemoMode={isDemoMode}
           onUpgrade={handleUpgradeToDeepDive}
           onSave={handleSaveReport}
@@ -567,8 +572,7 @@ const App: React.FC = () => {
           <div 
             className="flex items-center gap-1.5 sm:gap-2 text-indigo-600 font-bold text-base sm:text-xl cursor-pointer"
             onClick={() => {
-              handleReset();
-              setActiveTab('search');
+              handleStartNewSearch();
             }}
           >
             <Search className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -578,7 +582,7 @@ const App: React.FC = () => {
           <div className="flex items-center gap-3">
             <nav className="flex bg-slate-100 p-0.5 sm:p-1 rounded-lg">
               <button 
-                onClick={() => setActiveTab('search')}
+                onClick={() => handleStartNewSearch()}
                 className={`flex items-center px-2 sm:px-4 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all ${activeTab === 'search' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 <LayoutDashboard className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
@@ -619,7 +623,7 @@ const App: React.FC = () => {
               user={user} 
               onViewReport={handleViewReport} 
               onStartNewSearch={handleStartNewSearch}
-              onCompare={handleCompare} // Pass handler
+              onCompare={handleCompare}
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-96 text-center">
@@ -632,7 +636,7 @@ const App: React.FC = () => {
               </button>
             </div>
           )
-        ) : activeTab === 'comparison' ? ( // NEW VIEW
+        ) : activeTab === 'comparison' ? (
           <ComparisonView 
             reports={comparisonReports} 
             onBack={() => setActiveTab('dashboard')} 
