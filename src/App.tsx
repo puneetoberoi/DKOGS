@@ -5,7 +5,7 @@ import { AnalysisStatus } from './schema';
 import type { SearchParams, MarketReport } from './schema';
 import { analyzeMarket } from './services/geminiService';
 import { generateDemoReport } from './services/demoService';
-import { saveReport } from './services/reportService'; // NEW IMPORT
+import { saveReport } from './services/reportService';
 import LoadingScreen from './components/LoadingScreen';
 import ResultsDashboard from './components/ResultsDashboard';
 import TrendingView from './components/TrendingView';
@@ -21,8 +21,6 @@ import {
 } from './utils/currencyDetector';
 import type { LocationData } from './utils/currencyDetector';
 
-// ... (Keep AVAILABLE_SOURCES, AVAILABLE_REGIONS, LOOKBACK_OPTIONS, DEPTH_OPTIONS, CustomSelect exactly as is) ...
-// REBRANDED SOURCES
 const AVAILABLE_SOURCES = [
   'Online Communities', 
   'E-commerce Reviews', 
@@ -34,13 +32,11 @@ const AVAILABLE_SOURCES = [
   'Tech Blogs'          
 ];
 
-// LIMITED REGIONS (US & Canada only)
 const AVAILABLE_REGIONS = [
   { value: 'USA', label: 'United States' },
   { value: 'Canada', label: 'Canada' }
 ];
 
-// LOOKBACK OPTIONS
 const LOOKBACK_OPTIONS = [
   { value: 'Last 30 Days', label: 'Last 30 Days' },
   { value: 'Last 6 Months', label: 'Last 6 Months' },
@@ -48,15 +44,11 @@ const LOOKBACK_OPTIONS = [
   { value: 'All Time', label: 'All Time' }
 ];
 
-// DEPTH OPTIONS
 const DEPTH_OPTIONS = [
   { value: 'Quick Scan', label: 'Quick Scan (Free)' },
   { value: 'Deep Dive', label: 'Deep Dive (Full)' }
 ];
 
-// ============================================
-// CUSTOM SELECT COMPONENT
-// ============================================
 interface SelectProps {
   value: string | number;
   onChange: (value: string) => void;
@@ -99,9 +91,6 @@ const CustomSelect: React.FC<SelectProps> = ({ value, onChange, options, disable
   );
 };
 
-// ============================================
-// MAIN APP COMPONENT
-// ============================================
 const App: React.FC = () => {
   const { user } = useAuth(); 
   const [status, setStatus] = useState<AnalysisStatus>(AnalysisStatus.IDLE);
@@ -110,15 +99,38 @@ const App: React.FC = () => {
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
 
-  // Payment & Location state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false); 
   const [locationData, setLocationData] = useState<LocationData>(getDefaultLocation());
-  
-  // NEW: Pending Save State
   const [pendingSave, setPendingSave] = useState(false);
 
-  // ... (Keep useEffects for Legal/Location/Payment logic exactly as they are) ...
+  // PERSISTENCE LOGIC: Save report to local storage whenever it changes
+  useEffect(() => {
+    if (report) {
+      localStorage.setItem('current_report', JSON.stringify(report));
+    }
+  }, [report]);
+
+  // PERSISTENCE LOGIC: Restore report from local storage on mount
+  useEffect(() => {
+    const savedReport = localStorage.getItem('current_report');
+    const savedIsDemoMode = localStorage.getItem('is_demo_mode');
+    
+    if (savedReport) {
+      try {
+        const parsedReport = JSON.parse(savedReport);
+        setReport(parsedReport);
+        setStatus(AnalysisStatus.COMPLETE);
+        if (savedIsDemoMode) {
+          setIsDemoMode(savedIsDemoMode === 'true');
+        }
+        console.log('Restored report from local storage');
+      } catch (e) {
+        console.error('Failed to restore report', e);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const hasSeenLegal = localStorage.getItem('gapspotter_legal_accepted');
     if (!hasSeenLegal) {
@@ -156,16 +168,16 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // NEW EFFECT: Handle Auto-Save after Login
   useEffect(() => {
     if (user && pendingSave && report) {
       console.log('User logged in, saving pending report...');
       saveReport(user.id, report).then(result => {
         if (result.success) {
-          alert("Report saved to your Dashboard!"); // Simple feedback for MVP
+          alert("Report saved to your Dashboard!");
           setPendingSave(false);
         } else {
-          alert("Failed to save report.");
+          console.error('Save failed', result.error);
+          alert("Failed to save report. Please try again.");
         }
       });
     }
@@ -191,31 +203,28 @@ const App: React.FC = () => {
     }
   };
 
-  // NEW: Handle Save Report Action
   const handleSaveReport = async () => {
     if (!report) return;
 
     if (user) {
-      // User is logged in, save directly
       const result = await saveReport(user.id, report);
       if (result.success) {
-        alert("Report saved to your Dashboard!"); // Simple feedback for MVP
+        alert("Report saved to your Dashboard!");
       } else {
         alert("Failed to save report.");
       }
     } else {
-      // User is guest, prompt auth
       setPendingSave(true);
       setShowAuthModal(true);
     }
   };
 
-  // ... (Keep runPaidAnalysis, handlePaymentSuccess, handleInputChange, etc. exactly as is) ...
   const runPaidAnalysis = async (keyword: string, sources: string[], region: string, gaps: number) => {
     console.log(`🎯 Starting PAID analysis for: "${keyword}" with ${gaps} gaps`);
     
     setStatus(AnalysisStatus.SCRAPING);
     setIsDemoMode(false);
+    localStorage.setItem('is_demo_mode', 'false');
 
     try {
       const params: SearchParams = {
@@ -298,6 +307,10 @@ const App: React.FC = () => {
       return;
     }
 
+    // Clear old persistent report on new search
+    localStorage.removeItem('current_report');
+    localStorage.setItem('is_demo_mode', 'true');
+
     setStatus(AnalysisStatus.SCRAPING);
     setIsDemoMode(true);
 
@@ -328,6 +341,7 @@ const App: React.FC = () => {
     setStatus(AnalysisStatus.IDLE);
     setIsDemoMode(false);
     setForm(prev => ({ ...prev, keyword: '' }));
+    localStorage.removeItem('current_report'); // Clear stored report
   };
 
   const handleUpgradeToDeepDive = () => {
@@ -335,7 +349,6 @@ const App: React.FC = () => {
     handleReset();
   };
 
-  // Search Content Component
   const SearchContent = () => {
     if (status === AnalysisStatus.COMPLETE && report) {
       return (
@@ -344,7 +357,7 @@ const App: React.FC = () => {
           onReset={handleReset} 
           isDemoMode={isDemoMode}
           onUpgrade={handleUpgradeToDeepDive}
-          onSave={handleSaveReport} // PASS THE HANDLER
+          onSave={handleSaveReport}
         />
       );
     }
@@ -353,12 +366,10 @@ const App: React.FC = () => {
       return <LoadingScreen status={status} useGroq={form.useGroq} useBytez={form.useBytez} />;
     }
 
-    // ... (Keep the Search Form JSX exactly as is) ...
     return (
       <div className="flex-1 flex items-center justify-center p-3 sm:p-4 w-full">
         <div className="max-w-xl w-full space-y-5 sm:space-y-8">
           
-          {/* Hero */}
           <div className="text-center space-y-2 sm:space-y-4 px-2">
             <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-slate-900 tracking-tight">
               Find Your Next <br/>
@@ -372,11 +383,9 @@ const App: React.FC = () => {
             </p>
           </div>
 
-          {/* Form */}
           <div className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-xl border border-slate-100">
             <form onSubmit={runAnalysis} className="space-y-4 sm:space-y-6">
               
-              {/* Keyword */}
               <div className="space-y-1.5 sm:space-y-2">
                 <label className="text-xs sm:text-sm font-semibold text-slate-700 flex items-center">
                   <Search className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 text-indigo-500"/> 
@@ -392,7 +401,6 @@ const App: React.FC = () => {
                 />
               </div>
 
-              {/* Sources */}
               <div className="space-y-1.5 sm:space-y-2">
                 <label className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase flex items-center">
                   <Globe className="w-3 h-3 mr-1"/> Data Sources
@@ -418,10 +426,8 @@ const App: React.FC = () => {
                 </div>
               </div>
               
-              {/* Settings Grid */}
               <div className="grid grid-cols-3 gap-3 sm:gap-4">
                 
-                {/* Lookback */}
                 <div className="space-y-1 sm:space-y-1.5">
                   <label className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase flex items-center">
                     <Clock className="w-3 h-3 mr-1"/> Lookback
@@ -433,7 +439,6 @@ const App: React.FC = () => {
                   />
                 </div>
 
-                {/* Region */}
                 <div className="space-y-1 sm:space-y-1.5">
                   <label className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase flex items-center">
                     <MapPin className="w-3 h-3 mr-1"/> Region
@@ -445,7 +450,6 @@ const App: React.FC = () => {
                   />
                 </div>
 
-                {/* Depth */}
                 <div className="space-y-1 sm:space-y-1.5">
                   <label className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase flex items-center">
                     <Sliders className="w-3 h-3 mr-1"/> Depth
@@ -458,7 +462,6 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Quick Scan Banner */}
               {isQuickScan && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 sm:p-3">
                   <p className="text-[10px] sm:text-xs text-amber-800 leading-relaxed">
@@ -468,7 +471,6 @@ const App: React.FC = () => {
                 </div>
               )}
 
-              {/* Submit Button */}
               <button 
                 type="submit"
                 disabled={!hasKeyword}
@@ -501,7 +503,6 @@ const App: React.FC = () => {
     );
   };
 
-  // Dashboard Placeholder
   const DashboardContent = () => (
     <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500">
       <div className="bg-slate-100 p-6 rounded-full mb-4">
@@ -521,13 +522,10 @@ const App: React.FC = () => {
     </div>
   );
 
-  // ... (Keep Main Render return exactly as is) ...
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Legal Modal */}
       {showLegalModal && <FirstTimeUserModal onAccept={handleLegalAccept} />}
 
-      {/* Payment Modal */}
       <PaymentModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
@@ -541,13 +539,11 @@ const App: React.FC = () => {
         }}
       />
 
-      {/* Auth Modal */}
       <AuthModal 
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)} 
       />
 
-      {/* Navbar */}
       <header className="bg-white border-b border-slate-200 py-2 sm:py-3 sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-3 sm:px-4 flex items-center justify-between">
           <div 
@@ -579,7 +575,6 @@ const App: React.FC = () => {
               </button>
             </nav>
 
-            {/* User Menu or Sign In */}
             {user ? (
               <UserMenu 
                 user={user} 
@@ -597,7 +592,6 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col">
         {activeTab === 'trending' ? (
           <TrendingView onSelectTopic={handleTrendingSelect} />
