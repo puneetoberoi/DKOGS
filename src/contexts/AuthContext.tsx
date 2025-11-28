@@ -4,7 +4,12 @@ import { createClient, Session, User } from '@supabase/supabase-js';
 // Initialize Supabase Client
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-export const supabase = createClient(supabaseUrl, supabaseKey);
+
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('Supabase credentials missing! Authentication will not work.');
+}
+
+export const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
 interface AuthContextType {
   session: Session | null;
@@ -22,6 +27,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!supabaseUrl) {
+      setLoading(false);
+      return;
+    }
+
     // Check active session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -44,7 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin, // Returns to localhost or vercel app
+          redirectTo: window.location.origin,
         },
       });
       if (error) throw error;
