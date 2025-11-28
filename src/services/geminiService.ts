@@ -2,7 +2,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import Groq from "groq-sdk";
-import type { MarketReport, SearchParams } from "../schema";
+import { type MarketReport, type SearchParams, AnalysisStatus } from "../schema";
 import { collectMarketData } from './dataCollector';
 import { analyzeBytez } from './bytezService';
 import { logSuccess, logError, logQuery } from '../utils/logger';
@@ -88,7 +88,7 @@ export const analyzeMarket = async (
   
   try {
     // 1. COLLECT REAL DATA
-    if (onStatusUpdate) onStatusUpdate('SCRAPING');
+    if (onStatusUpdate) onStatusUpdate(AnalysisStatus.SCRAPING);
     const realData = await collectMarketData(params);
     
     console.log(`📊 Collected ${realData.totalDataPoints} real data points`);
@@ -99,7 +99,7 @@ export const analyzeMarket = async (
     const usedSources = ["Gemini 2.0 Flash"];
 
     // Always call Groq (if API key exists)
-    if (onStatusUpdate) onStatusUpdate('GROQ_ANALYSIS');
+    if (onStatusUpdate) onStatusUpdate(AnalysisStatus.GROQ_ANALYSIS);
     const groqData = await fetchGroqSentiment(params.keyword);
     if (groqData) {
       externalContext += `\n\n${groqData}`;
@@ -107,14 +107,14 @@ export const analyzeMarket = async (
     }
 
     // Always call Bytez (if API key exists)
-    if (onStatusUpdate) onStatusUpdate('BYTEZ_ANALYSIS');
+    if (onStatusUpdate) onStatusUpdate(AnalysisStatus.BYTEZ_ANALYSIS);
     const bytezData = await analyzeBytez(params.keyword);
     if (bytezData) {
       externalContext += `\n\n${bytezData}`;
       usedSources.push("Bytez AI");
     }
 
-    if (onStatusUpdate) onStatusUpdate('CLUSTERING');
+    if (onStatusUpdate) onStatusUpdate(AnalysisStatus.CLUSTERING);
 
     // 3. Main Gemini Analysis
     const prompt = `
@@ -232,6 +232,9 @@ export const analyzeMarket = async (
       },
       required: ["industry", "totalAnalyzed", "overallSentiment", "sentimentBreakdown", "sentimentFactors", "analyzedSamples", "competitors", "marketTrends", "gaps", "summary"]
     };
+
+    // Fix: Use Enum value
+    if (onStatusUpdate) onStatusUpdate(AnalysisStatus.SCORING);
 
     const response = await ai.models.generateContent({
       model: modelId,
