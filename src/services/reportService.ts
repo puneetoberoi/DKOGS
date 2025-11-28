@@ -1,9 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
-import type { MarketReport } from '../schema';
+// src/services/reportService.ts
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+import type { MarketReport } from '../schema';
+// Fix: Import the authenticated client from AuthContext
+import { supabase } from '../contexts/AuthContext'; 
 
 export interface SavedReportItem {
   id: string;
@@ -11,13 +10,20 @@ export interface SavedReportItem {
   industry: string;
   overall_score: number;
   created_at: string;
-  report_data: MarketReport; // We need this to view it
+  report_data: MarketReport;
 }
 
 export const saveReport = async (userId: string, report: MarketReport) => {
   try {
     console.log('Attempting to save report for user:', userId);
     
+    // Check if session exists on this client
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      console.error('No active session found in reportService client!');
+      throw new Error('User not authenticated');
+    }
+
     const payload = {
       user_id: userId,
       keyword: report.keyword,
@@ -48,7 +54,6 @@ export const saveReport = async (userId: string, report: MarketReport) => {
 
 export const getSavedReports = async (userId: string) => {
   try {
-    // Fetch everything needed for the card + the data to load it
     const { data, error } = await supabase
       .from('saved_reports')
       .select('id, keyword, industry, overall_score, created_at, report_data')
