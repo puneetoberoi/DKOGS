@@ -9,18 +9,21 @@ import { saveReport } from './services/reportService';
 import LoadingScreen from './components/LoadingScreen';
 import ResultsDashboard from './components/ResultsDashboard';
 import TrendingView from './components/TrendingView';
+import DashboardView from './components/DashboardView'; // NEW IMPORT
 import { FirstTimeUserModal } from './components/LegalDisclaimers';
 import { PaymentModal } from './components/PaymentModal';
 import { AuthModal } from './components/AuthModal';
 import { UserMenu } from './components/UserMenu';
 import { useAuth } from './contexts/AuthContext';
-import { Search, Globe, Clock, MapPin, Sliders, ArrowRight, Sparkles, LayoutDashboard, Flame, FolderKanban } from 'lucide-react';
+import { Search, Globe, Clock, MapPin, Sliders, ArrowRight, Sparkles, LayoutDashboard, Flame } from 'lucide-react';
 import {
   getDefaultLocation,
   detectUserLocation,
 } from './utils/currencyDetector';
 import type { LocationData } from './utils/currencyDetector';
 
+// ... (Keep Constants and CustomSelect exactly as is) ...
+// REBRANDED SOURCES
 const AVAILABLE_SOURCES = [
   'Online Communities', 
   'E-commerce Reviews', 
@@ -104,14 +107,12 @@ const App: React.FC = () => {
   const [locationData, setLocationData] = useState<LocationData>(getDefaultLocation());
   const [pendingSave, setPendingSave] = useState(false);
 
-  // PERSISTENCE LOGIC: Save report to local storage whenever it changes
   useEffect(() => {
     if (report) {
       localStorage.setItem('current_report', JSON.stringify(report));
     }
   }, [report]);
 
-  // PERSISTENCE LOGIC: Restore report from local storage on mount
   useEffect(() => {
     const savedReport = localStorage.getItem('current_report');
     const savedIsDemoMode = localStorage.getItem('is_demo_mode');
@@ -124,7 +125,6 @@ const App: React.FC = () => {
         if (savedIsDemoMode) {
           setIsDemoMode(savedIsDemoMode === 'true');
         }
-        console.log('Restored report from local storage');
       } catch (e) {
         console.error('Failed to restore report', e);
       }
@@ -148,7 +148,6 @@ const App: React.FC = () => {
       const pendingAnalysis = sessionStorage.getItem('pendingAnalysis');
       if (pendingAnalysis) {
         const analysisData = JSON.parse(pendingAnalysis);
-        console.log('Running analysis with:', analysisData);
         window.history.replaceState({}, '', window.location.pathname);
         setForm(prev => ({
           ...prev,
@@ -191,10 +190,8 @@ const App: React.FC = () => {
       localStorage.setItem('gapspotter_location_consent', 'true');
       try {
         const location = await detectUserLocation();
-        console.log('Location detected:', location);
         setLocationData(location);
       } catch (error) {
-        console.error('Location detection failed:', error);
         setLocationData(getDefaultLocation());
       }
     } else {
@@ -219,9 +216,20 @@ const App: React.FC = () => {
     }
   };
 
+  // Handle viewing a report from the dashboard
+  const handleViewReport = (savedReport: MarketReport) => {
+    setReport(savedReport);
+    setStatus(AnalysisStatus.COMPLETE);
+    setActiveTab('search'); // Switch to results view
+    setIsDemoMode(false); // Assuming saved reports are real
+  };
+
+  const handleStartNewSearch = () => {
+    handleReset();
+    setActiveTab('search');
+  };
+
   const runPaidAnalysis = async (keyword: string, sources: string[], region: string, gaps: number) => {
-    console.log(`🎯 Starting PAID analysis for: "${keyword}" with ${gaps} gaps`);
-    
     setStatus(AnalysisStatus.SCRAPING);
     setIsDemoMode(false);
     localStorage.setItem('is_demo_mode', 'false');
@@ -242,12 +250,10 @@ const App: React.FC = () => {
         setStatus(newStatus as AnalysisStatus);
       });
       
-      console.log('✅ Paid analysis completed');
       setReport(result);
       setStatus(AnalysisStatus.COMPLETE);
       
     } catch (error) {
-      console.error("❌ Analysis failed:", error);
       setStatus(AnalysisStatus.ERROR);
       setTimeout(() => setStatus(AnalysisStatus.IDLE), 3000);
     }
@@ -295,19 +301,14 @@ const App: React.FC = () => {
     if (e) e.preventDefault();
     
     if (!hasKeyword) {
-      console.log('❌ No keyword entered');
       return;
     }
-
-    console.log(`🎯 Starting analysis for: "${form.keyword}"`);
-    console.log(`📊 Mode: ${isQuickScan ? 'Quick Scan (Demo)' : 'Deep Dive (Real)'}`);
 
     if (!isQuickScan) {
       setShowPaymentModal(true);
       return;
     }
 
-    // Clear old persistent report on new search
     localStorage.removeItem('current_report');
     localStorage.setItem('is_demo_mode', 'true');
 
@@ -315,8 +316,6 @@ const App: React.FC = () => {
     setIsDemoMode(true);
 
     try {
-      console.log('🎭 Demo Mode: Generating sample data');
-      
       await new Promise(r => setTimeout(r, 1000));
       setStatus(AnalysisStatus.CLUSTERING);
       await new Promise(r => setTimeout(r, 800));
@@ -324,13 +323,10 @@ const App: React.FC = () => {
       await new Promise(r => setTimeout(r, 600));
       
       const result = generateDemoReport(form.keyword, form.geography);
-      console.log('✅ Demo report generated');
-      
       setReport(result);
       setStatus(AnalysisStatus.COMPLETE);
       
     } catch (error) {
-      console.error("❌ Analysis failed:", error);
       setStatus(AnalysisStatus.ERROR);
       setTimeout(() => setStatus(AnalysisStatus.IDLE), 3000);
     }
@@ -341,7 +337,7 @@ const App: React.FC = () => {
     setStatus(AnalysisStatus.IDLE);
     setIsDemoMode(false);
     setForm(prev => ({ ...prev, keyword: '' }));
-    localStorage.removeItem('current_report'); // Clear stored report
+    localStorage.removeItem('current_report'); 
   };
 
   const handleUpgradeToDeepDive = () => {
@@ -503,25 +499,6 @@ const App: React.FC = () => {
     );
   };
 
-  const DashboardContent = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500">
-      <div className="bg-slate-100 p-6 rounded-full mb-4">
-        <FolderKanban size={48} className="text-slate-400" />
-      </div>
-      <h2 className="text-xl font-bold text-slate-700 mb-2">Your Dashboard</h2>
-      <p className="max-w-md">
-        Save reports to build your market intelligence hub. <br/>
-        (Coming Soon: Saved reports will appear here)
-      </p>
-      <button 
-        onClick={() => setActiveTab('search')}
-        className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-      >
-        Start a New Search
-      </button>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {showLegalModal && <FirstTimeUserModal onAccept={handleLegalAccept} />}
@@ -596,7 +573,23 @@ const App: React.FC = () => {
         {activeTab === 'trending' ? (
           <TrendingView onSelectTopic={handleTrendingSelect} />
         ) : activeTab === 'dashboard' ? (
-          <DashboardContent />
+          user ? (
+            <DashboardView 
+              user={user} 
+              onViewReport={handleViewReport} 
+              onStartNewSearch={handleStartNewSearch}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-96 text-center">
+              <p className="text-slate-500 mb-4">Please sign in to view your dashboard.</p>
+              <button 
+                onClick={() => setShowAuthModal(true)}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                Sign In
+              </button>
+            </div>
+          )
         ) : (
           <SearchContent />
         )}
