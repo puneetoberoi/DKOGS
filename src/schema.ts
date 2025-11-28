@@ -1,8 +1,5 @@
 // src/schema.ts
 
-// ============================================
-// ANALYSIS STATUS
-// ============================================
 export const AnalysisStatus = {
   IDLE: 'idle',
   SCRAPING: 'scraping',
@@ -16,9 +13,6 @@ export const AnalysisStatus = {
 
 export type AnalysisStatus = typeof AnalysisStatus[keyof typeof AnalysisStatus];
 
-// ============================================
-// SEARCH PARAMS
-// ============================================
 export interface SearchParams {
   keyword: string;
   sources: string[];
@@ -30,9 +24,6 @@ export interface SearchParams {
   gapCount?: number;
 }
 
-// ============================================
-// GAP DATA (Used in charts and filtering)
-// ============================================
 export interface GapData {
   title: string;
   description: string;
@@ -47,9 +38,6 @@ export interface GapData {
   sources: string[];
 }
 
-// ============================================
-// MARKET GAP (Same as GapData for compatibility)
-// ============================================
 export interface MarketGap {
   id?: string;
   title: string;
@@ -74,43 +62,28 @@ export interface MarketGap {
   potentialRevenue?: string;
 }
 
-// ============================================
-// COMPETITOR
-// ============================================
 export interface Competitor {
   name: string;
   strength: string;
   weakness: string;
 }
 
-// ============================================
-// SENTIMENT BREAKDOWN
-// ============================================
 export interface SentimentBreakdown {
   positive: number;
   neutral: number;
   negative: number;
 }
 
-// ============================================
-// SENTIMENT FACTORS
-// ============================================
 export interface SentimentFactors {
   positive: string[];
   negative: string[];
 }
 
-// ============================================
-// MARKET TREND
-// ============================================
 export interface MarketTrend {
   year: string;
   demandIndex: number;
 }
 
-// ============================================
-// ANALYZED SAMPLE
-// ============================================
 export interface AnalyzedSample {
   source: string;
   date: string;
@@ -118,9 +91,12 @@ export interface AnalyzedSample {
   snippet: string;
 }
 
-// ============================================
-// MARKET REPORT (Main report type)
-// ============================================
+// NEW INTERFACE
+export interface RelatedOpportunity {
+  keyword: string;
+  reason: string;
+}
+
 export interface MarketReport {
   id?: string;
   keyword: string;
@@ -128,31 +104,27 @@ export interface MarketReport {
   geography?: string;
   lookback?: string;
   
-  // Core data
   industry: string;
   totalAnalyzed: number;
   summary: string;
   gaps: MarketGap[];
   
-  // Sentiment
   overallSentiment: number;
   sentimentBreakdown: SentimentBreakdown;
   sentimentFactors: SentimentFactors;
   
-  // Analysis data
   competitors: Competitor[];
   marketTrends: MarketTrend[];
   analyzedSamples: AnalyzedSample[];
   
-  // Sources
+  // NEW FIELD
+  relatedOpportunities?: RelatedOpportunity[];
+  
   dataSources: string[];
   sourcesUsed?: string[];
   methodology?: string;
 }
 
-// ============================================
-// LOG ENTRY
-// ============================================
 export interface LogEntry {
   timestamp: string;
   type: 'success' | 'error' | 'query';
