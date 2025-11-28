@@ -105,14 +105,12 @@ const App: React.FC = () => {
   const [locationData, setLocationData] = useState<LocationData>(getDefaultLocation());
   const [pendingSave, setPendingSave] = useState(false);
 
-  // PERSISTENCE: Save report to localStorage to survive refresh/redirects
   useEffect(() => {
     if (report) {
       localStorage.setItem('current_report', JSON.stringify(report));
     }
   }, [report]);
 
-  // PERSISTENCE: Restore report on mount
   useEffect(() => {
     const savedReport = localStorage.getItem('current_report');
     const savedIsDemoMode = localStorage.getItem('is_demo_mode');
@@ -121,12 +119,10 @@ const App: React.FC = () => {
       try {
         const parsedReport = JSON.parse(savedReport);
         setReport(parsedReport);
-        // If we have a report, assume analysis is complete
         setStatus(AnalysisStatus.COMPLETE);
         if (savedIsDemoMode) {
           setIsDemoMode(savedIsDemoMode === 'true');
         }
-        console.log('Restored report from local storage');
       } catch (e) {
         console.error('Failed to restore report', e);
       }
@@ -150,17 +146,13 @@ const App: React.FC = () => {
       const pendingAnalysis = sessionStorage.getItem('pendingAnalysis');
       if (pendingAnalysis) {
         const analysisData = JSON.parse(pendingAnalysis);
-        console.log('Running analysis with:', analysisData);
-        
         window.history.replaceState({}, '', window.location.pathname);
-        
         setForm(prev => ({
           ...prev,
           keyword: analysisData.keyword,
           sources: analysisData.sources,
           geography: analysisData.region,
         }));
-        
         runPaidAnalysis(analysisData.keyword, analysisData.sources, analysisData.region, analysisData.gaps);
         sessionStorage.removeItem('pendingAnalysis');
       }
@@ -173,11 +165,14 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // AUTO-SAVE: After login, check if we have a pending save
+  // Auto-save on login
   useEffect(() => {
     if (user && pendingSave && report) {
       console.log('User logged in, saving pending report...');
-      saveReport(user.id, report).then(result => {
+      // Fallback for missing keyword
+      const reportToSave = { ...report, keyword: report.keyword || form.keyword };
+      
+      saveReport(user.id, reportToSave).then(result => {
         if (result.success) {
           alert("Report saved to your Dashboard!");
           setPendingSave(false);
@@ -211,7 +206,10 @@ const App: React.FC = () => {
     if (!report) return;
 
     if (user) {
-      const result = await saveReport(user.id, report);
+      // Fallback for missing keyword
+      const reportToSave = { ...report, keyword: report.keyword || form.keyword };
+      
+      const result = await saveReport(user.id, reportToSave);
       if (result.success) {
         alert("Report saved to your Dashboard!");
       } else {
@@ -226,7 +224,7 @@ const App: React.FC = () => {
 
   const handleViewReport = (savedReport: MarketReport) => {
     setReport(savedReport);
-    localStorage.setItem('current_report', JSON.stringify(savedReport)); // Save so it persists
+    localStorage.setItem('current_report', JSON.stringify(savedReport));
     setStatus(AnalysisStatus.COMPLETE);
     setActiveTab('search');
     setIsDemoMode(false);
@@ -259,7 +257,6 @@ const App: React.FC = () => {
       });
       
       setReport(result);
-      // Save immediately to avoid data loss
       localStorage.setItem('current_report', JSON.stringify(result));
       setStatus(AnalysisStatus.COMPLETE);
       
@@ -319,7 +316,6 @@ const App: React.FC = () => {
       return;
     }
 
-    // Clear persisted report for new scan
     localStorage.removeItem('current_report');
     localStorage.setItem('is_demo_mode', 'true');
 
@@ -336,7 +332,6 @@ const App: React.FC = () => {
       const result = generateDemoReport(form.keyword, form.geography);
       
       setReport(result);
-      // Save immediately
       localStorage.setItem('current_report', JSON.stringify(result));
       setStatus(AnalysisStatus.COMPLETE);
       
@@ -351,7 +346,7 @@ const App: React.FC = () => {
     setStatus(AnalysisStatus.IDLE);
     setIsDemoMode(false);
     setForm(prev => ({ ...prev, keyword: '' }));
-    localStorage.removeItem('current_report'); // Clear persisted report
+    localStorage.removeItem('current_report'); 
   };
 
   const handleUpgradeToDeepDive = () => {
