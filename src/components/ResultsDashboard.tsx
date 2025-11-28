@@ -10,21 +10,22 @@ import {
 } from './MarketCharts';
 import { 
   Users, TrendingUp, AlertCircle, ChevronDown, 
-  CheckCircle, X, FileText, Activity, Target, ThumbsUp, ThumbsDown, Filter, Maximize2, Shield,
-  Save, LayoutGrid
+  Download, CheckCircle, X, FileText, Activity, Target, ThumbsUp, ThumbsDown, Filter, Maximize2, Shield,
+  Save, LayoutGrid, Sparkles, Search
 } from 'lucide-react';
+import { jsPDF } from "jspdf";
 import { DataTransparencyBanner, InvestmentDisclaimer, DemoModeBanner } from './LegalDisclaimers';
 
-// Interfaces
 interface ResultsDashboardProps {
   report: MarketReport;
   onReset: () => void;
   isDemoMode?: boolean;
   onUpgrade?: () => void;
-  onSave: () => void; // NEW PROP
+  onSave: () => void;
+  onAnalyzeRelated?: (keyword: string) => void; // NEW PROP
 }
 
-// ... (Keep helper functions getCategoryForSource and normalizeScore exactly as is) ...
+// ... (Helper functions remain same) ...
 const getCategoryForSource = (source: string): string => {
   const s = source.toLowerCase();
   if (s.includes('reddit') || s.includes('hacker news') || s.includes('forum')) return 'Online Communities';
@@ -41,7 +42,7 @@ const normalizeScore = (value: number): number => {
   return Math.min(100, Math.max(0, Math.round(score)));
 };
 
-// ... (Keep DetailModal, StatCard, OpportunityCard sub-components exactly as is) ...
+// ... (Sub-components DetailModal, StatCard, OpportunityCard remain same) ...
 const DetailModal: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({ title, onClose, children }) => (
   <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
@@ -171,12 +172,12 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
   onReset,
   isDemoMode = false,
   onUpgrade,
-  onSave // NEW
+  onSave,
+  onAnalyzeRelated // NEW
 }) => {
   const [modalType, setModalType] = useState<'metrics' | 'competitors' | 'sentiment' | 'score' | null>(null);
   const [activeSources, setActiveSources] = useState<string[]>(report.dataSources || []);
 
-  // --- FILTER LOGIC ---
   const filteredAndSortedGaps = useMemo(() => {
     let gaps = report.gaps;
     const isFiltering = activeSources.length < (report.dataSources?.length || 0);
@@ -184,7 +185,6 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
     if (isFiltering) {
       gaps = gaps.filter(gap => {
         if (!gap.sources || gap.sources.length === 0) return true;
-        
         return gap.sources.some(gapSource => {
           const category = getCategoryForSource(gapSource);
           return activeSources.some(active => active.includes(gapSource) || active === category);
@@ -212,15 +212,153 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
     return Math.max(...scores);
   }, [report.gaps]);
 
-  // REMOVED GENERATE PDF AND CSV FUNCTIONS
+  // ... (PDF generation code remains same) ...
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    let yPos = 20;
+    const margin = 20;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const contentWidth = pageWidth - (margin * 2);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(24);
+    doc.setTextColor(79, 70, 229);
+    doc.text("GapSpotter Report", margin, yPos);
+    yPos += 10;
+
+    doc.setFontSize(14);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`Market Analysis: ${report.industry}`, margin, yPos);
+    yPos += 10;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, margin, yPos);
+    yPos += 15;
+
+    doc.setDrawColor(79, 70, 229);
+    doc.setLineWidth(0.5);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 10;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Executive Summary", margin, yPos);
+    yPos += 7;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const summaryLines = doc.splitTextToSize(report.summary, contentWidth);
+    doc.text(summaryLines, margin, yPos);
+    yPos += (summaryLines.length * 5) + 10;
+
+    doc.setFont("helvetica", "bold");
+    doc.text(`Overall Sentiment: ${normalizeScore(report.overallSentiment)}%`, margin, yPos);
+    doc.text(`Data Points: ${report.totalAnalyzed}`, margin + 60, yPos);
+    doc.text(`Top Score: ${topScore}/100`, margin + 120, yPos);
+    yPos += 15;
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Key Competitors identified:", margin, yPos);
+    yPos += 7;
+    doc.setFont("helvetica", "normal");
+    report.competitors.forEach(c => {
+      doc.text(`• ${c.name} (Strength: ${c.strength})`, margin + 5, yPos);
+      yPos += 5;
+    });
+    yPos += 10;
+
+    doc.addPage();
+    yPos = 20;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(79, 70, 229);
+    doc.text("Identified Market Opportunities", margin, yPos);
+    yPos += 15;
+
+    filteredAndSortedGaps.forEach((gap, index) => {
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      const title = `${index + 1}. ${gap.title}`;
+      doc.text(title, margin, yPos);
+      
+      const scoreText = `Score: ${normalizeScore(gap.opportunityScore)}`;
+      doc.setTextColor(79, 70, 229);
+      doc.text(scoreText, pageWidth - margin - doc.getTextWidth(scoreText), yPos);
+      yPos += 7;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(50, 50, 50);
+      const descLines = doc.splitTextToSize(gap.description, contentWidth);
+      doc.text(descLines, margin, yPos);
+      yPos += (descLines.length * 5) + 5;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text(`Price: $${gap.estimatedPrice}`, margin, yPos);
+      doc.text(`Willingness to Pay: ${gap.willingnessToPay}`, margin + 50, yPos);
+      doc.text(`Competition: ${gap.competitionDensity}`, margin + 120, yPos);
+      yPos += 7;
+
+      doc.setFont("helvetica", "bold");
+      doc.text("Recommended Solution:", margin, yPos);
+      doc.setFont("helvetica", "normal");
+      const solutionLines = doc.splitTextToSize(gap.recommendedSolution, contentWidth - 40);
+      doc.text(solutionLines, margin + 40, yPos);
+      yPos += (solutionLines.length * 5) + 5;
+
+      doc.setFont("helvetica", "bold");
+      doc.text("Pain Points:", margin, yPos);
+      doc.setFont("helvetica", "normal");
+      gap.painPoints.forEach(point => {
+        doc.text(`• ${point}`, margin + 40, yPos);
+        yPos += 5;
+      });
+
+      yPos += 10;
+      doc.setDrawColor(200, 200, 200);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 10;
+    });
+
+    doc.save(`gapspotter-report-${report.industry.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+  };
+
+  const generateCSV = () => {
+    const headers = ["Rank", "Title", "Opportunity Score", "Sentiment Score", "Willingness To Pay", "Competition", "Solution", "Sources"];
+    const rows = filteredAndSortedGaps.map((g, i) => [
+      i + 1,
+      `"${g.title}"`, 
+      normalizeScore(g.opportunityScore), 
+      normalizeScore(g.sentimentScore), 
+      `"${g.willingnessToPay}"`, 
+      g.competitionDensity, 
+      `"${g.recommendedSolution}"`, 
+      `"${g.sources?.join(', ')}"`
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `gapspotter_data_${report.industry}.csv`);
+    document.body.appendChild(link);
+    link.click();
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-8 animate-fade-in">
       
-      {/* DEMO MODE BANNER */}
       {isDemoMode && <DemoModeBanner onUpgrade={onUpgrade} />}
 
-      {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">
@@ -230,15 +368,18 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
           <p className="text-slate-500 mt-1">Deep analysis for <span className="font-semibold text-indigo-600">{report.industry}</span></p>
         </div>
         <div className="flex gap-3">
+          <button onClick={onReset} className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">New Search</button>
           {!isDemoMode && (
-            // Replaced CSV/PDF/New Search with "Save to Dashboard"
-            <button 
-              onClick={onSave} 
-              className="px-6 py-2.5 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex items-center gap-2 transform hover:-translate-y-0.5"
-            >
-              <LayoutGrid size={18} />
-              Save to Dashboard
-            </button>
+            <>
+              <button onClick={onSave} className="px-6 py-2.5 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex items-center gap-2 transform hover:-translate-y-0.5">
+                <LayoutGrid size={18} />
+                Save to Dashboard
+              </button>
+              <div className="flex gap-2 ml-2 border-l border-slate-200 pl-2">
+                <button onClick={generateCSV} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Download CSV"><FileText size={18} /></button>
+                <button onClick={generatePDF} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Download PDF"><Download size={18} /></button>
+              </div>
+            </>
           )}
           {isDemoMode && onUpgrade && (
             <button onClick={onUpgrade} className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-colors flex items-center shadow-sm">
@@ -248,11 +389,8 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
         </div>
       </div>
 
-      {/* DATA TRANSPARENCY BANNER */}
       <DataTransparencyBanner />
 
-      {/* ... (Rest of the component remains EXACTLY the same, starting from Stats Grid) ... */}
-      {/* STATS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard label="Data Points Analyzed" value={report.totalAnalyzed.toLocaleString()} icon={Activity} color="bg-blue-500" onClick={() => setModalType('metrics')} />
         <StatCard label="Competitors Found" value={report.competitors.length.toString()} icon={Users} color="bg-amber-500" onClick={() => setModalType('competitors')} />
@@ -260,7 +398,6 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
         <StatCard label="Top Opportunity Score" value={topScore.toString()} icon={TrendingUp} color="bg-emerald-500" onClick={() => setModalType('score')} />
       </div>
 
-      {/* SOURCE FILTER */}
       <div className="flex flex-wrap gap-2 items-center bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
           <span className="text-xs font-bold text-slate-400 uppercase mr-2 flex items-center"><Filter className="w-3 h-3 mr-1" /> Filter by Source:</span>
           {report.dataSources?.map((source, i) => {
@@ -274,7 +411,6 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
           })}
       </div>
 
-      {/* OPPORTUNITIES LIST */}
       <div className="space-y-4">
          <h3 className="text-xl font-bold text-slate-900 flex items-center justify-between">
             <div className="flex items-center">
@@ -296,10 +432,8 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
          </div>
       </div>
 
-      {/* CHARTS ROW */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
          
-         {/* Sentiment */}
          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
             <h4 className="text-xs font-bold text-slate-500 uppercase mb-4 flex items-center justify-between">
               <span>Sentiment Distribution</span>
@@ -335,7 +469,6 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
             )}
          </div>
 
-         {/* Trend */}
          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
             <h4 className="text-xs font-bold text-slate-500 uppercase mb-4">5-Year Demand Trend</h4>
             <div className="flex-1 min-h-[200px]">
@@ -343,7 +476,6 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
             </div>
          </div>
 
-         {/* Market Leaders */}
          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col h-full">
              <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
                 <h3 className="font-bold flex items-center text-sm uppercase text-slate-700">
@@ -368,7 +500,6 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
          </div>
       </div>
 
-      {/* SCATTER & BAR CHARTS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
             <div className="flex justify-between items-center mb-4">
@@ -387,7 +518,6 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
           </div>
       </div>
       
-      {/* EXECUTIVE SUMMARY */}
       <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
          <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
          <h3 className="font-bold text-slate-900 mb-4 flex items-center text-lg">
@@ -398,12 +528,34 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
          </div>
       </div>
 
-      {/* INVESTMENT DISCLAIMER */}
-      <InvestmentDisclaimer />
+      {/* NEW: Related Opportunities Section */}
+      {report.relatedOpportunities && report.relatedOpportunities.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-amber-500" />
+            Also Worth Exploring
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {report.relatedOpportunities.map((opp, i) => (
+              <div key={i} className="bg-gradient-to-br from-slate-50 to-white p-5 rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all duration-200">
+                <h4 className="font-bold text-slate-900 mb-2">{opp.keyword}</h4>
+                <p className="text-xs text-slate-600 mb-4 leading-relaxed">{opp.reason}</p>
+                {onAnalyzeRelated && (
+                  <button 
+                    onClick={() => onAnalyzeRelated(opp.keyword)}
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                  >
+                    <Search size={12} />
+                    Analyze This Market
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-      {/* ============================================ */}
-      {/* MODALS */}
-      {/* ============================================ */}
+      <InvestmentDisclaimer />
 
       {modalType === 'metrics' && (
         <DetailModal title="Analyzed Data Sources" onClose={() => setModalType(null)}>
