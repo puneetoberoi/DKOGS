@@ -14,7 +14,6 @@ const groq = new Groq({
   dangerouslyAllowBrowser: true
 });
 
-// Groq Analysis Function
 async function fetchGroqSentiment(keyword: string): Promise<string> {
   if (!import.meta.env.VITE_GROQ_API_KEY) {
     console.log('ℹ️ Groq: Not configured, skipping');
@@ -57,7 +56,6 @@ async function fetchGroqSentiment(keyword: string): Promise<string> {
   }
 }
 
-// Helper to convert lookback string to days
 function getLookbackDays(lookback: string): number {
   switch (lookback) {
     case 'Last 30 Days': return 30;
@@ -68,7 +66,6 @@ function getLookbackDays(lookback: string): number {
   }
 }
 
-// Main Analysis Function
 export const analyzeMarket = async (
   params: SearchParams, 
   onStatusUpdate?: (status: string) => void
@@ -77,7 +74,6 @@ export const analyzeMarket = async (
   const gapCount = params.gapCount || 5;
   const startTime = Date.now();
 
-  // Log the query
   logQuery({
     keyword: params.keyword,
     sources: params.sources,
@@ -87,18 +83,14 @@ export const analyzeMarket = async (
   });
   
   try {
-    // 1. COLLECT REAL DATA
     if (onStatusUpdate) onStatusUpdate(AnalysisStatus.SCRAPING);
     const realData = await collectMarketData(params);
     
     console.log(`📊 Collected ${realData.totalDataPoints} real data points`);
-    console.log(`📁 Sources breakdown:`, realData.sources);
     
-    // 2. Gather External AI Intelligence
     let externalContext = "";
     const usedSources = ["Gemini 2.0 Flash"];
 
-    // Always call Groq (if API key exists)
     if (onStatusUpdate) onStatusUpdate(AnalysisStatus.GROQ_ANALYSIS);
     const groqData = await fetchGroqSentiment(params.keyword);
     if (groqData) {
@@ -106,7 +98,6 @@ export const analyzeMarket = async (
       usedSources.push("Groq (Llama 3)");
     }
 
-    // Always call Bytez (if API key exists)
     if (onStatusUpdate) onStatusUpdate(AnalysisStatus.BYTEZ_ANALYSIS);
     const bytezData = await analyzeBytez(params.keyword);
     if (bytezData) {
@@ -116,7 +107,6 @@ export const analyzeMarket = async (
 
     if (onStatusUpdate) onStatusUpdate(AnalysisStatus.CLUSTERING);
 
-    // 3. Main Gemini Analysis
     const prompt = `
       You are GapSpotter, an expert Market Researcher specializing in ${params.geography} markets.
       
@@ -233,7 +223,6 @@ export const analyzeMarket = async (
       required: ["industry", "totalAnalyzed", "overallSentiment", "sentimentBreakdown", "sentimentFactors", "analyzedSamples", "competitors", "marketTrends", "gaps", "summary"]
     };
 
-    // Fix: Use Enum value
     if (onStatusUpdate) onStatusUpdate(AnalysisStatus.SCORING);
 
     const response = await ai.models.generateContent({
@@ -251,11 +240,11 @@ export const analyzeMarket = async (
 
     const result = JSON.parse(response.text) as MarketReport;
     
-    // Force real data count
+    // Inject required fields
+    result.keyword = params.keyword;
     result.totalAnalyzed = realData.totalDataPoints; 
     result.dataSources = usedSources.concat(params.sources); 
 
-    // Log success
     logSuccess({
       keyword: params.keyword,
       sources: params.sources,
@@ -270,7 +259,6 @@ export const analyzeMarket = async (
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
-    // Log error
     logError({
       keyword: params.keyword,
       sources: params.sources,
