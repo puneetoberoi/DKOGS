@@ -219,16 +219,19 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
 
   const generatePDF = () => {
     const doc = new jsPDF();
-    const margin = 20;
     let yPos = 20;
+    const margin = 20;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const contentWidth = pageWidth - (margin * 2);
 
+    // --- HEADER ---
     doc.setFont("helvetica", "bold");
     doc.setFontSize(24);
-    doc.setTextColor(79, 70, 229);
-    doc.text("GapSpotter", margin, yPos);
-    yPos += 15;
+    doc.setTextColor(79, 70, 229); // Indigo color
+    doc.text("GapSpotter Report", margin, yPos);
+    yPos += 10;
 
-    doc.setFontSize(18);
+    doc.setFontSize(14);
     doc.setTextColor(30, 41, 59);
     doc.text(`Market Analysis: ${report.industry}`, margin, yPos);
     yPos += 10;
@@ -236,29 +239,115 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139);
-    doc.text(`Generated on ${new Date().toLocaleDateString()}`, margin, yPos);
-    yPos += 20;
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, margin, yPos);
+    yPos += 15;
 
-    doc.setFontSize(10);
-    doc.text("OVERALL SENTIMENT", margin + 10, yPos + 10);
-    doc.text("DATA ANALYZED", margin + 70, yPos + 10);
-    doc.text("TOP OPPORTUNITY", margin + 130, yPos + 10);
+    // --- EXECUTIVE SUMMARY ---
+    doc.setDrawColor(79, 70, 229);
+    doc.setLineWidth(0.5);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 10;
 
-    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(30, 41, 59);
-    doc.text(`${normalizeScore(report.overallSentiment)}%`, margin + 10, yPos + 20);
-    doc.text(`${report.totalAnalyzed.toLocaleString()}`, margin + 70, yPos + 20);
-    doc.text(`${topScore}/100`, margin + 130, yPos + 20);
-    yPos += 45;
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Executive Summary", margin, yPos);
+    yPos += 7;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const summaryLines = doc.splitTextToSize(report.summary, contentWidth);
+    doc.text(summaryLines, margin, yPos);
+    yPos += (summaryLines.length * 5) + 10;
+
+    // --- METRICS ROW ---
+    doc.setFont("helvetica", "bold");
+    doc.text(`Overall Sentiment: ${normalizeScore(report.overallSentiment)}%`, margin, yPos);
+    doc.text(`Data Points: ${report.totalAnalyzed}`, margin + 60, yPos);
+    doc.text(`Top Score: ${topScore}/100`, margin + 120, yPos);
+    yPos += 15;
+
+    // --- COMPETITORS ---
+    doc.setFont("helvetica", "bold");
+    doc.text("Key Competitors identified:", margin, yPos);
+    yPos += 7;
+    doc.setFont("helvetica", "normal");
+    report.competitors.forEach(c => {
+      doc.text(`• ${c.name} (Strength: ${c.strength})`, margin + 5, yPos);
+      yPos += 5;
+    });
+    yPos += 10;
+
+    // --- DETAILED OPPORTUNITIES ---
+    doc.addPage();
+    yPos = 20;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(79, 70, 229);
+    doc.text("Identified Market Opportunities", margin, yPos);
+    yPos += 15;
 
     filteredAndSortedGaps.forEach((gap, index) => {
-        if (yPos > 240) { doc.addPage(); yPos = 20; }
-        doc.text(`${index + 1}. ${gap.title}`, margin + 5, yPos);
-        yPos += 15;
+      // Check for page break
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      // Title & Score
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      const title = `${index + 1}. ${gap.title}`;
+      doc.text(title, margin, yPos);
+      
+      const scoreText = `Score: ${normalizeScore(gap.opportunityScore)}`;
+      doc.setTextColor(79, 70, 229);
+      doc.text(scoreText, pageWidth - margin - doc.getTextWidth(scoreText), yPos);
+      yPos += 7;
+
+      // Description
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(50, 50, 50);
+      const descLines = doc.splitTextToSize(gap.description, contentWidth);
+      doc.text(descLines, margin, yPos);
+      yPos += (descLines.length * 5) + 5;
+
+      // Stats Grid
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text(`Price: $${gap.estimatedPrice}`, margin, yPos);
+      doc.text(`Willingness to Pay: ${gap.willingnessToPay}`, margin + 50, yPos);
+      doc.text(`Competition: ${gap.competitionDensity}`, margin + 120, yPos);
+      yPos += 7;
+
+      // Solution
+      doc.setFont("helvetica", "bold");
+      doc.text("Recommended Solution:", margin, yPos);
+      doc.setFont("helvetica", "normal");
+      const solutionLines = doc.splitTextToSize(gap.recommendedSolution, contentWidth - 40);
+      doc.text(solutionLines, margin + 40, yPos);
+      yPos += (solutionLines.length * 5) + 5;
+
+      // Pain Points
+      doc.setFont("helvetica", "bold");
+      doc.text("Pain Points:", margin, yPos);
+      doc.setFont("helvetica", "normal");
+      gap.painPoints.forEach(point => {
+        doc.text(`• ${point}`, margin + 40, yPos);
+        yPos += 5;
+      });
+
+      yPos += 10; // Space between items
+      
+      // Separator line
+      doc.setDrawColor(200, 200, 200);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 10;
     });
 
-    doc.save(`gapspotter-analysis-${report.industry.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+    doc.save(`gapspotter-report-${report.industry.replace(/\s+/g, '-').toLowerCase()}.pdf`);
   };
 
   const generateCSV = () => {
@@ -314,7 +403,7 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
       </div>
 
       {/* DATA TRANSPARENCY BANNER */}
-      <DataTransparencyBanner /> 
+      <DataTransparencyBanner />
 
       {/* STATS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
