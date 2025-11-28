@@ -7,24 +7,36 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const saveReport = async (userId: string, report: MarketReport) => {
   try {
+    console.log('Attempting to save report for user:', userId);
+    
+    // Validate payload
+    const payload = {
+      user_id: userId,
+      keyword: report.keyword,
+      industry: report.industry,
+      overall_score: report.overallSentiment, 
+      summary: report.summary,
+      report_data: report, 
+      created_at: new Date().toISOString(),
+    };
+
+    console.log('Payload:', payload);
+
     const { data, error } = await supabase
       .from('saved_reports')
-      .insert({
-        user_id: userId,
-        keyword: report.keyword,
-        industry: report.industry,
-        overall_score: report.overallSentiment, // Assuming overallSentiment is the score (0-100)
-        summary: report.summary,
-        report_data: report, // Save full JSON
-        created_at: new Date().toISOString(),
-      })
+      .insert(payload)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase Error Detail:', error); // CRITICAL: Log exact error
+      throw error;
+    }
+    
+    console.log('Report saved successfully:', data);
     return { success: true, data };
-  } catch (error) {
-    console.error('Error saving report:', error);
+  } catch (error: any) {
+    console.error('Error saving report:', error.message || error);
     return { success: false, error };
   }
 };
