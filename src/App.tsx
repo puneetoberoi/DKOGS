@@ -10,10 +10,11 @@ import ResultsDashboard from './components/ResultsDashboard';
 import TrendingView from './components/TrendingView';
 import { FirstTimeUserModal } from './components/LegalDisclaimers';
 import { PaymentModal } from './components/PaymentModal';
-// Add new imports
+// --- NEW IMPORTS ---
 import { AuthModal } from './components/AuthModal';
 import { UserMenu } from './components/UserMenu';
 import { useAuth } from './contexts/AuthContext';
+// -------------------
 import { Search, Globe, Clock, MapPin, Sliders, ArrowRight, Sparkles, LayoutDashboard, Flame, FolderKanban } from 'lucide-react';
 import {
   getDefaultLocation,
@@ -21,6 +22,7 @@ import {
 } from './utils/currencyDetector';
 import type { LocationData } from './utils/currencyDetector';
 
+// ... (Keep ALL constants and CustomSelect component exactly as they are) ...
 // REBRANDED SOURCES
 const AVAILABLE_SOURCES = [
   'Online Communities', 
@@ -105,6 +107,7 @@ const App: React.FC = () => {
   const { user } = useAuth(); // Hook into Auth state
   const [status, setStatus] = useState<AnalysisStatus>(AnalysisStatus.IDLE);
   const [report, setReport] = useState<MarketReport | null>(null);
+  // Added 'dashboard' to activeTab type
   const [activeTab, setActiveTab] = useState<'search' | 'trending' | 'dashboard'>('search');
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -114,6 +117,7 @@ const App: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false); // Auth Modal state
   const [locationData, setLocationData] = useState<LocationData>(getDefaultLocation());
   
+  // ... (Keep useEffects for Legal/Location/Payment logic exactly as they are) ...
   // Check for first-time user AND payment success on mount
   useEffect(() => {
     const hasSeenLegal = localStorage.getItem('gapspotter_legal_accepted');
@@ -333,6 +337,7 @@ const App: React.FC = () => {
       return <LoadingScreen status={status} useGroq={form.useGroq} useBytez={form.useBytez} />;
     }
 
+    // ... (Keep Return JSX for form input exactly as is) ...
     return (
       <div className="flex-1 flex items-center justify-center p-3 sm:p-4 w-full">
         <div className="max-w-xl w-full space-y-5 sm:space-y-8">
@@ -480,7 +485,7 @@ const App: React.FC = () => {
     );
   };
 
-  // Dashboard Placeholder
+  // Dashboard Placeholder (New)
   const DashboardContent = () => (
     <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500">
       <div className="bg-slate-100 p-6 rounded-full mb-4">
@@ -520,7 +525,7 @@ const App: React.FC = () => {
         }}
       />
 
-      {/* Auth Modal */}
+      {/* Auth Modal (New) */}
       <AuthModal 
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)} 
@@ -558,7 +563,7 @@ const App: React.FC = () => {
               </button>
             </nav>
 
-            {/* User Menu or Sign In */}
+            {/* User Menu or Sign In (New) */}
             {user ? (
               <UserMenu 
                 user={user} 
