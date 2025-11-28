@@ -10,7 +10,11 @@ import ResultsDashboard from './components/ResultsDashboard';
 import TrendingView from './components/TrendingView';
 import { FirstTimeUserModal } from './components/LegalDisclaimers';
 import { PaymentModal } from './components/PaymentModal';
-import { Search, Globe, Clock, MapPin, Sliders, ArrowRight, Sparkles, LayoutDashboard, Flame } from 'lucide-react';
+// Add new imports
+import { AuthModal } from './components/AuthModal';
+import { UserMenu } from './components/UserMenu';
+import { useAuth } from './contexts/AuthContext';
+import { Search, Globe, Clock, MapPin, Sliders, ArrowRight, Sparkles, LayoutDashboard, Flame, FolderKanban } from 'lucide-react';
 import {
   getDefaultLocation,
   detectUserLocation,
@@ -98,14 +102,16 @@ const CustomSelect: React.FC<SelectProps> = ({ value, onChange, options, disable
 // MAIN APP COMPONENT
 // ============================================
 const App: React.FC = () => {
+  const { user } = useAuth(); // Hook into Auth state
   const [status, setStatus] = useState<AnalysisStatus>(AnalysisStatus.IDLE);
   const [report, setReport] = useState<MarketReport | null>(null);
-  const [activeTab, setActiveTab] = useState<'search' | 'trending'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'trending' | 'dashboard'>('search');
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
 
   // Payment & Location state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false); // Auth Modal state
   const [locationData, setLocationData] = useState<LocationData>(getDefaultLocation());
   
   // Check for first-time user AND payment success on mount
@@ -391,7 +397,7 @@ const App: React.FC = () => {
                 </div>
               </div>
               
-              {/* Settings Grid - Now 3 columns without Gap Count */}
+              {/* Settings Grid */}
               <div className="grid grid-cols-3 gap-3 sm:gap-4">
                 
                 {/* Lookback */}
@@ -429,8 +435,6 @@ const App: React.FC = () => {
                     options={DEPTH_OPTIONS}
                   />
                 </div>
-
-                {/* GAP COUNT DROPDOWN REMOVED - Now selected in Payment Modal */}
               </div>
 
               {/* Quick Scan Banner */}
@@ -456,7 +460,7 @@ const App: React.FC = () => {
                   ${!hasKeyword 
                     ? 'bg-slate-300 cursor-not-allowed text-slate-500' 
                     : isQuickScan 
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-200/50' 
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-200/50 hover:shadow-amber-300/50' 
                       : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200/50'
                   }
                 `}
@@ -475,6 +479,26 @@ const App: React.FC = () => {
       </div>
     );
   };
+
+  // Dashboard Placeholder
+  const DashboardContent = () => (
+    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500">
+      <div className="bg-slate-100 p-6 rounded-full mb-4">
+        <FolderKanban size={48} className="text-slate-400" />
+      </div>
+      <h2 className="text-xl font-bold text-slate-700 mb-2">Your Dashboard</h2>
+      <p className="max-w-md">
+        Save reports to build your market intelligence hub. <br/>
+        (Coming Soon: Saved reports will appear here)
+      </p>
+      <button 
+        onClick={() => setActiveTab('search')}
+        className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+      >
+        Start a New Search
+      </button>
+    </div>
+  );
 
   // Main Render
   return (
@@ -496,6 +520,12 @@ const App: React.FC = () => {
         }}
       />
 
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+      />
+
       {/* Navbar */}
       <header className="bg-white border-b border-slate-200 py-2 sm:py-3 sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-3 sm:px-4 flex items-center justify-between">
@@ -510,22 +540,39 @@ const App: React.FC = () => {
             <span>GapSpotter</span>
           </div>
           
-          <nav className="flex bg-slate-100 p-0.5 sm:p-1 rounded-lg">
-            <button 
-              onClick={() => setActiveTab('search')}
-              className={`flex items-center px-2 sm:px-4 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all ${activeTab === 'search' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              <LayoutDashboard className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              Search
-            </button>
-            <button 
-              onClick={() => setActiveTab('trending')}
-              className={`flex items-center px-2 sm:px-4 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all ${activeTab === 'trending' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              <Flame className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-              Trending
-            </button>
-          </nav>
+          <div className="flex items-center gap-3">
+            <nav className="flex bg-slate-100 p-0.5 sm:p-1 rounded-lg">
+              <button 
+                onClick={() => setActiveTab('search')}
+                className={`flex items-center px-2 sm:px-4 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all ${activeTab === 'search' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <LayoutDashboard className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Search</span>
+              </button>
+              <button 
+                onClick={() => setActiveTab('trending')}
+                className={`flex items-center px-2 sm:px-4 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all ${activeTab === 'trending' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <Flame className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Trending</span>
+              </button>
+            </nav>
+
+            {/* User Menu or Sign In */}
+            {user ? (
+              <UserMenu 
+                user={user} 
+                onDashboardClick={() => setActiveTab('dashboard')} 
+              />
+            ) : (
+              <button 
+                onClick={() => setShowAuthModal(true)}
+                className="text-sm font-medium text-slate-600 hover:text-indigo-600 px-2 py-1 transition-colors"
+              >
+                Sign In
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -533,6 +580,8 @@ const App: React.FC = () => {
       <main className="flex-1 flex flex-col">
         {activeTab === 'trending' ? (
           <TrendingView onSelectTopic={handleTrendingSelect} />
+        ) : activeTab === 'dashboard' ? (
+          <DashboardContent />
         ) : (
           <SearchContent />
         )}
