@@ -107,7 +107,6 @@ const App: React.FC = () => {
   const [pendingSave, setPendingSave] = useState(false);
   const [comparisonReports, setComparisonReports] = useState<MarketReport[]>([]);
   
-  // NEW: Track if report is saved
   const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
@@ -179,7 +178,7 @@ const App: React.FC = () => {
         if (result.success) {
           alert("Report saved to your Dashboard!");
           setPendingSave(false);
-          setIsSaved(true); // MARK AS SAVED
+          setIsSaved(true);
         } else {
           console.error('Save failed', result.error);
           alert(`Failed to save report: ${typeof result.error === 'object' ? JSON.stringify(result.error) : result.error}`);
@@ -214,7 +213,7 @@ const App: React.FC = () => {
       const result = await saveReport(user.id, reportToSave);
       if (result.success) {
         alert("Report saved to your Dashboard!");
-        setIsSaved(true); // MARK AS SAVED
+        setIsSaved(true);
       } else {
         console.error('Manual Save failed', result.error);
         alert(`Failed to save report: ${typeof result.error === 'object' ? JSON.stringify(result.error) : result.error}`);
@@ -231,7 +230,7 @@ const App: React.FC = () => {
     setStatus(AnalysisStatus.COMPLETE);
     setActiveTab('search');
     setIsDemoMode(false);
-    setIsSaved(true); // Saved because it came from dashboard
+    setIsSaved(true);
   };
 
   const handleCompare = (reports: MarketReport[]) => {
@@ -239,7 +238,6 @@ const App: React.FC = () => {
     setActiveTab('comparison');
   };
 
-  // Confirmation Logic
   const confirmReset = () => {
     if (report && !isDemoMode && !isSaved) {
        return window.confirm("You have unsaved analysis. Discarding will lose this data forever. Continue?");
@@ -247,6 +245,7 @@ const App: React.FC = () => {
     return true;
   };
 
+  // FIX: Analyze Related now forces Deep Dive
   const handleAnalyzeRelated = (keyword: string) => {
     if (!confirmReset()) return;
 
@@ -256,7 +255,11 @@ const App: React.FC = () => {
     setIsSaved(false);
     localStorage.removeItem('current_report');
     
-    setForm(prev => ({ ...prev, keyword }));
+    setForm(prev => ({ 
+      ...prev, 
+      keyword,
+      depth: 'Deep Dive' // FORCE DEEP DIVE
+    }));
     setActiveTab('search');
   };
 
@@ -278,7 +281,7 @@ const App: React.FC = () => {
   const runPaidAnalysis = async (keyword: string, sources: string[], region: string, gaps: number) => {
     setStatus(AnalysisStatus.SCRAPING);
     setIsDemoMode(false);
-    setIsSaved(false); // Reset save state for new report
+    setIsSaved(false);
     localStorage.setItem('is_demo_mode', 'false');
 
     try {
@@ -357,7 +360,7 @@ const App: React.FC = () => {
       return;
     }
 
-    if (!confirmReset()) return; // Warn if discarding current report
+    if (!confirmReset()) return;
 
     localStorage.removeItem('current_report');
     localStorage.setItem('is_demo_mode', 'true');
@@ -383,7 +386,7 @@ const App: React.FC = () => {
       setStatus(AnalysisStatus.ERROR);
       setTimeout(() => setStatus(AnalysisStatus.IDLE), 3000);
     }
-  }, [form, isQuickScan, hasKeyword, isSaved, report]); // Added deps
+  }, [form, isQuickScan, hasKeyword, isSaved, report]); 
 
   const handleUpgradeToDeepDive = () => {
     setForm(prev => ({ ...prev, depth: 'Deep Dive' }));
@@ -395,11 +398,12 @@ const App: React.FC = () => {
       return (
         <ResultsDashboard 
           report={report} 
-          onReset={handleStartNewSearch} // Use wrapper to prompt
+          onReset={handleStartNewSearch}
           isDemoMode={isDemoMode}
           onUpgrade={handleUpgradeToDeepDive}
           onSave={handleSaveReport}
           onAnalyzeRelated={handleAnalyzeRelated}
+          isSaved={isSaved} // PASS PROP
         />
       );
     }
@@ -572,7 +576,8 @@ const App: React.FC = () => {
           <div 
             className="flex items-center gap-1.5 sm:gap-2 text-indigo-600 font-bold text-base sm:text-xl cursor-pointer"
             onClick={() => {
-              handleStartNewSearch();
+              handleReset();
+              setActiveTab('search');
             }}
           >
             <Search className="w-5 h-5 sm:w-6 sm:h-6" />
