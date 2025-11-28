@@ -1,5 +1,4 @@
-// src/services/reportService.ts
-
+import { createClient } from '@supabase/supabase-js';
 import type { MarketReport } from '../schema';
 import { supabase } from '../contexts/AuthContext';
 
@@ -68,9 +67,8 @@ export const saveReport = async (userId: string, report: MarketReport) => {
       return { success: false, error: error.message };
     }
 
-    // 4. TRIGGER EMAIL (New)
+    // 4. TRIGGER EMAIL
     if (session.user.email) {
-      // Fire and forget (don't await)
       sendReportEmail(session.user.email, report.keyword, data.id);
     }
     
@@ -81,7 +79,6 @@ export const saveReport = async (userId: string, report: MarketReport) => {
   }
 };
 
-// ... (Keep getSavedReports and deleteReport exactly as is) ...
 export const getSavedReports = async (userId: string) => {
   try {
     const { data, error } = await supabase
@@ -109,6 +106,23 @@ export const deleteReport = async (reportId: string) => {
     return { success: true };
   } catch (error) {
     console.error('Error deleting report:', error);
+    return { success: false, error };
+  }
+};
+
+// NEW FUNCTION: Fetch single report by ID (For Email Link / Admin View)
+export const getReportById = async (reportId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('saved_reports')
+      .select('report_data')
+      .eq('id', reportId)
+      .single();
+
+    if (error) throw error;
+    return { success: true, data: data.report_data };
+  } catch (error) {
+    console.error('Error fetching report:', error);
     return { success: false, error };
   }
 };
