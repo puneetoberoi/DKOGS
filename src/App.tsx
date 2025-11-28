@@ -165,11 +165,9 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Auto-save on login
   useEffect(() => {
     if (user && pendingSave && report) {
       console.log('User logged in, saving pending report...');
-      // Fallback for missing keyword
       const reportToSave = { ...report, keyword: report.keyword || form.keyword };
       
       saveReport(user.id, reportToSave).then(result => {
@@ -206,9 +204,7 @@ const App: React.FC = () => {
     if (!report) return;
 
     if (user) {
-      // Fallback for missing keyword
       const reportToSave = { ...report, keyword: report.keyword || form.keyword };
-      
       const result = await saveReport(user.id, reportToSave);
       if (result.success) {
         alert("Report saved to your Dashboard!");
@@ -228,6 +224,12 @@ const App: React.FC = () => {
     setStatus(AnalysisStatus.COMPLETE);
     setActiveTab('search');
     setIsDemoMode(false);
+  };
+
+  const handleAnalyzeRelated = (keyword: string) => {
+    setForm(prev => ({ ...prev, keyword }));
+    handleReset();
+    setActiveTab('search');
   };
 
   const handleStartNewSearch = () => {
@@ -363,6 +365,7 @@ const App: React.FC = () => {
           isDemoMode={isDemoMode}
           onUpgrade={handleUpgradeToDeepDive}
           onSave={handleSaveReport}
+          onAnalyzeRelated={handleAnalyzeRelated}
         />
       );
     }
