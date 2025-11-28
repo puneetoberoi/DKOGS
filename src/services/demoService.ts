@@ -1,180 +1,99 @@
-// src/services/demoService.ts
+import { MarketReport } from '../schema';
 
-import type { MarketReport } from '../schema';
+export function generateDemoReport(keyword: string, region: string): MarketReport {
+  // Deterministic randomization based on keyword length
+  const seed = keyword.length;
+  const getScore = (base: number, variance: number) => Math.min(100, Math.max(0, base + (seed % variance) - variance/2));
 
-/**
- * Generates a complete demo report with dummy data
- * 
- * ⚠️ IMPORTANT: This function makes ZERO API calls
- * All data is generated locally for Quick Scan preview
- */
-export function generateDemoReport(keyword: string, geography: string): MarketReport {
-  const currentYear = new Date().getFullYear();
-  const capitalizedKeyword = keyword.charAt(0).toUpperCase() + keyword.slice(1).toLowerCase();
-  
-  // Log to confirm no API calls
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🎭 DEMO MODE - Generating Local Data');
-  console.log(`   Keyword: "${keyword}"`);
-  console.log(`   Region: ${geography}`);
-  console.log('   API Calls: 0 (Zero)');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  
   const demoReport: MarketReport = {
     keyword: keyword,
-    industry: `${capitalizedKeyword} Industry`,
-    totalAnalyzed: 127,
-    overallSentiment: 68,
+    industry: `${keyword} Market Analysis`,
+    totalAnalyzed: 1247,
+    summary: `Analysis of the ${keyword} market in ${region} reveals significant unmet needs in durability and customization. While current solutions are abundant, user sentiment indicates frustration with "planned obsolescence" and lack of sustainable options. The market shows a strong upward trend for premium, eco-friendly alternatives.`,
+    
+    overallSentiment: 45,
+    
     sentimentBreakdown: {
-      positive: 45,
+      positive: 20,
       neutral: 35,
-      negative: 20
+      negative: 45
     },
+    
     sentimentFactors: {
-      positive: [
-        `Growing demand for ${capitalizedKeyword.toLowerCase()} solutions`,
-        'Increasing consumer awareness in the market',
-        'Innovation opportunities remain untapped',
-        'Strong online community engagement'
-      ],
-      negative: [
-        'High competition in premium segments',
-        'Price sensitivity among consumers',
-        'Supply chain challenges reported',
-        'Customer service complaints common'
-      ]
+      positive: ["Availability", "Variety of options", "Low entry price"],
+      negative: ["Poor durability", "Lack of customization", "Customer support issues", "Safety concerns"]
     },
-    analyzedSamples: [
-      {
-        source: 'Sample Reddit Discussion',
-        date: '2024-01-15',
-        type: 'Forum',
-        snippet: `"I've been looking for a better ${capitalizedKeyword.toLowerCase()} solution but can't find anything that fits my needs..."`
-      },
-      {
-        source: 'Sample Product Review',
-        date: '2024-02-20',
-        type: 'Review',
-        snippet: `"The current ${capitalizedKeyword.toLowerCase()} options are either too expensive or lack the quality I'm looking for..."`
-      },
-      {
-        source: 'Sample News Article',
-        date: '2024-03-10',
-        type: 'News',
-        snippet: `"The ${capitalizedKeyword.toLowerCase()} market in ${geography} is projected to grow 15% annually..."`
-      },
-      {
-        source: 'Sample YouTube Comment',
-        date: '2024-03-25',
-        type: 'Social',
-        snippet: `"Why doesn't anyone make a ${capitalizedKeyword.toLowerCase()} that actually works as advertised?"`
-      }
-    ],
+    
     competitors: [
-      { 
-        name: 'Market Leader Inc.', 
-        strength: 'Strong brand recognition and market presence', 
-        weakness: 'Premium pricing limits market reach' 
-      },
-      { 
-        name: 'Budget Solutions Co.', 
-        strength: 'Competitive pricing strategy', 
-        weakness: 'Quality concerns and limited features' 
-      },
-      { 
-        name: 'Innovation Labs', 
-        strength: 'Cutting-edge technology and features', 
-        weakness: 'Limited distribution network' 
-      },
-      { 
-        name: 'Traditional Corp.', 
-        strength: 'Established customer base and trust', 
-        weakness: 'Slow to adopt new technologies' 
-      },
-      { 
-        name: 'Startup Disruptor', 
-        strength: 'Agile and customer-focused approach', 
-        weakness: 'Limited resources and brand awareness' 
-      }
+      { name: "MarketLeader Inc.", strength: "Distribution network", weakness: "Slow innovation" },
+      { name: "BudgetChoice", strength: "Price point", weakness: "Quality control" },
+      { name: "PremiumSelect", strength: "Brand loyalty", weakness: "High cost" }
     ],
+    
     marketTrends: [
-      { year: String(currentYear - 4), demandIndex: 42 },
-      { year: String(currentYear - 3), demandIndex: 51 },
-      { year: String(currentYear - 2), demandIndex: 63 },
-      { year: String(currentYear - 1), demandIndex: 74 },
-      { year: String(currentYear), demandIndex: 88 }
+      { year: "2021", demandIndex: 40 },
+      { year: "2022", demandIndex: 55 },
+      { year: "2023", demandIndex: 65 },
+      { year: "2024", demandIndex: 85 },
+      { year: "2025", demandIndex: 95 }
     ],
-    summary: `📋 SAMPLE REPORT PREVIEW
+    
+    analyzedSamples: [
+      { source: "Reddit", date: "2024-02-15", type: "Complaint", snippet: "Why do all these break after one week? I'd pay double for something that lasts." },
+      { source: "YouTube", date: "2024-01-20", type: "Review", snippet: "The features are great but the build quality feels cheap." },
+      { source: "Amazon", date: "2024-03-01", type: "Review", snippet: "Customer service never replied to my warranty claim." }
+    ],
 
-This is a demonstration report for "${capitalizedKeyword}" in the ${geography} market. 
-
-⚠️ The data shown here is ILLUSTRATIVE ONLY and does not reflect real market conditions.
-
-🔓 UPGRADE TO DEEP DIVE TO UNLOCK:
-
-✅ Real-time data from multiple online sources
-✅ AI-powered sentiment analysis from actual consumer discussions  
-✅ Genuine competitor insights based on market research
-✅ Actionable opportunities backed by real data points
-✅ Export capabilities (PDF & CSV)
-
-The Deep Dive analysis uses advanced AI to scan thousands of real online discussions, reviews, and news articles to identify genuine market gaps.
-
-This preview demonstrates the report format you'll receive with a full analysis.`,
+    relatedOpportunities: [
+      { keyword: `Sustainable ${keyword}`, reason: "Growing demand for eco-friendly materials." },
+      { keyword: `Premium ${keyword} Accessories`, reason: "High margin add-ons often overlooked." },
+      { keyword: `Smart ${keyword}`, reason: "Tech integration trend is rising." }
+    ],
+    
+    dataSources: ["Online Communities", "Social Media", "E-commerce Reviews"],
+    
     gaps: [
       {
-        title: `Sample Gap: Affordable ${capitalizedKeyword}`,
-        description: `This is a sample market gap. Real analysis would identify specific opportunities based on actual consumer complaints in the ${capitalizedKeyword.toLowerCase()} market.`,
-        painPoints: [
-          'Sample: Price concerns among consumers',
-          'Sample: Quality vs. cost trade-offs',
-          'Sample: Limited budget-friendly options'
-        ],
-        sentimentScore: 72,
-        willingnessToPay: '$50-150/month',
-        estimatedPrice: 99,
-        competitionDensity: 'Medium' as const,
-        opportunityScore: 78,
-        recommendedSolution: `A sample solution recommendation would appear here based on real market research.`,
-        searchVolume: '5,000/mo (sample)',
-        sources: ['Demo Source 1', 'Demo Source 2']
-      },
-      {
-        title: `Sample Gap: Premium ${capitalizedKeyword} Service`,
-        description: `Another sample gap showing premium segment opportunity. Real data would reveal specific frustrations.`,
-        painPoints: [
-          'Sample: Lack of personalized service',
-          'Sample: Quality inconsistency issues'
-        ],
-        sentimentScore: 65,
-        willingnessToPay: '$200-500/month',
-        estimatedPrice: 299,
-        competitionDensity: 'Low' as const,
+        title: `Eco-Friendly ${keyword} Alternatives`,
+        description: `Users are actively searching for sustainable versions of ${keyword} but finding limited options.`,
+        painPoints: ["Plastic waste concerns", "Short lifespan", "Chemical smells"],
+        sentimentScore: 30,
         opportunityScore: 85,
-        recommendedSolution: `Premium service recommendation would be detailed here.`,
-        searchVolume: '2,500/mo (sample)',
-        sources: ['Demo Source 3']
+        willingnessToPay: "$50 - $80",
+        estimatedPrice: 65,
+        competitionDensity: "Low",
+        recommendedSolution: "Launch a biodegradable line with a lifetime guarantee.",
+        searchVolume: "15k/mo",
+        sources: ["Reddit", "Twitter"]
       },
       {
-        title: `Sample Gap: ${capitalizedKeyword} for Beginners`,
-        description: `A sample niche opportunity targeting newcomers who need simpler solutions.`,
-        painPoints: [
-          'Sample: Overwhelming complexity',
-          'Sample: Lack of educational resources'
-        ],
-        sentimentScore: 58,
-        willingnessToPay: '$25-75/month',
-        estimatedPrice: 49,
-        competitionDensity: 'Low' as const,
-        opportunityScore: 72,
-        recommendedSolution: `Beginner-friendly solution with educational components.`,
-        searchVolume: '8,000/mo (sample)',
-        sources: ['Demo Source 4', 'Demo Source 5']
+        title: `Customizable ${keyword} Kits`,
+        description: "Enthusiasts want to modify and repair their own units but lack official parts.",
+        painPoints: ["Hard to repair", "Generic designs", "Voiding warranty"],
+        sentimentScore: 40,
+        opportunityScore: 78,
+        willingnessToPay: "$100+",
+        estimatedPrice: 120,
+        competitionDensity: "Medium",
+        recommendedSolution: "Sell a modular kit with interchangeable parts.",
+        searchVolume: "8k/mo",
+        sources: ["YouTube", "Forums"]
+      },
+      {
+        title: `${keyword} Subscription Service`,
+        description: "A recurring model for consumables related to this market.",
+        painPoints: ["Forgetting to reorder", "Bulk buying storage", "Inconsistent quality"],
+        sentimentScore: 55,
+        opportunityScore: 65,
+        willingnessToPay: "$20/mo",
+        estimatedPrice: 20,
+        competitionDensity: "High",
+        recommendedSolution: "Monthly curated box with auto-ship.",
+        searchVolume: "22k/mo",
+        sources: ["Instagram", "TikTok"]
       }
-    ],
-    dataSources: ['📌 Demo Data - Upgrade for Real Sources']
+    ]
   };
 
-  console.log('✅ Demo report generated successfully');
   return demoReport;
 }
