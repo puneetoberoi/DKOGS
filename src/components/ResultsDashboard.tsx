@@ -120,16 +120,6 @@ const OpportunityCard: React.FC<{ gap: GapData; index: number; rank: number; isD
                   </li>
                 ))}
               </ul>
-              {gap.sources && gap.sources.length > 0 && (
-                 <div className="mt-4">
-                   <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2">Data Sources</h4>
-                   <div className="flex flex-wrap gap-1">
-                     {gap.sources.map(s => (
-                       <span key={s} className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">{s}</span>
-                     ))}
-                   </div>
-                 </div>
-              )}
             </div>
             <div className="md:col-span-1">
                <h4 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center"><Target className="w-3 h-3 mr-1"/> Recommended Solution</h4>
