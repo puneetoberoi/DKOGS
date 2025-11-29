@@ -126,3 +126,17 @@ export const getReportById = async (reportId: string) => {
     return { success: false, error };
   }
 };
+
+// Add this function to the bottom of reportService.ts
+
+export const getTrendingReports = async () => {
+  try {
+    const { data, error } = await supabase.rpc('get_trending_opportunities');
+    
+    if (error) throw error;
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error fetching trends:', error);
+    return { success: false, error };
+  }
+};
