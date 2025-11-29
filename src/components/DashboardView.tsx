@@ -73,11 +73,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onViewReport, onSta
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); 
     
     const isStale = diffDays > 30;
-    // Calculate gray percentage: 0% at day 0, 100% at day 30
+    
+    // LINEAR 30 DAY DECAY
+    // Day 0 = 0% gray. Day 30 = 100% gray.
     const grayPercent = Math.min(100, (diffDays / 30) * 100);
     
-    console.log(`Report Age: ${diffDays} days. Decay: ${grayPercent}%`); // Debug Log
-    return { diffDays, isStale, grayPercent };
+    // VISIBILITY BOOST: Also drop opacity so it "fades away"
+    // Day 0 = 1.0 opacity. Day 30 = 0.6 opacity.
+    const opacity = Math.max(0.6, 1 - (diffDays / 75));
+
+    console.log(`Report Age: ${diffDays} days. Decay: ${grayPercent}%. Opacity: ${opacity}`);
+    return { diffDays, isStale, grayPercent, opacity };
   };
 
   if (loading) {
@@ -138,21 +144,24 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onViewReport, onSta
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {reports.map((report) => {
           const isSelected = selectedIds.includes(report.id);
-          const { diffDays, isStale, grayPercent } = getDecayStatus(report.created_at);
+          const { diffDays, isStale, grayPercent, opacity } = getDecayStatus(report.created_at);
 
           return (
             <div 
               key={report.id}
               className={`group relative bg-white rounded-xl border p-5 cursor-pointer transition-all duration-500 overflow-hidden ${
                 isSelected ? 'border-indigo-500 shadow-md ring-1 ring-indigo-500' : 'border-slate-200 hover:border-indigo-300 hover:shadow-md'
-              } ${isStale ? 'opacity-90' : ''}`}
+              } ${isStale ? 'bg-slate-50' : 'bg-white'}`}
               onClick={() => onViewReport(report.report_data)}
             >
-              {/* DECAY WRAPPER: Apply grayscale only to content, not to the refresh button */}
-              <div style={{ filter: `grayscale(${grayPercent}%)` }} className="transition-all duration-500">
-                
-                {/* Stale Badge (Inside gray because it should look old?) No, badge should be alert color. Move out? */}
-                {/* Keeping badge inside for now, but alert color usually punches through gray partially */}
+              {/* CONTENT WRAPPER WITH DECAY */}
+              <div 
+                style={{ 
+                  filter: `grayscale(${grayPercent}%)`, 
+                  opacity: opacity 
+                }} 
+                className="transition-all duration-500"
+              >
                 
                 <div className={`absolute top-0 left-0 w-1 h-full ${
                   report.overall_score >= 80 ? 'bg-emerald-500' : 
@@ -203,17 +212,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onViewReport, onSta
                 </div>
               </div>
 
-              {/* ELEMENTS OUTSIDE GRAYSCALE WRAPPER */}
+              {/* ELEMENTS OUTSIDE DECAY (Always Vibrant) */}
               
-              {/* Stale Badge - Kept outside to stay Red */}
               {isStale && (
-                <div className="absolute top-0 right-0 bg-rose-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg z-10 flex items-center gap-1 shadow-sm">
+                <div className="absolute top-0 right-0 bg-rose-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg z-10 flex items-center gap-1 shadow-sm animate-pulse">
                   <AlertTriangle size={10} /> STALE ({diffDays}d)
                 </div>
               )}
 
-              {/* Refresh Button - Vibrant and clickable */}
-              {/* Condition: diffDays > 30 for Prod. You can lower to > 0 to test visual. */}
+              {/* Show Refresh button if older than 30 days (Use 0 to test) */}
               {diffDays > 30 && (
                 <div className="absolute bottom-4 right-4 z-20">
                   <button
@@ -221,7 +228,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onViewReport, onSta
                       e.stopPropagation();
                       onRefreshReport(report.report_data);
                     }}
-                    className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors flex items-center gap-1 shadow-lg animate-pulse"
+                    className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors flex items-center gap-1 shadow-lg"
                   >
                     <RefreshCw size={12} /> Update (-50%)
                   </button>
