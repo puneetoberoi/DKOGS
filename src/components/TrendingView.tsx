@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, ArrowRight, Search, Flame, Loader2 } from 'lucide-react';
+import { TrendingUp, ArrowRight, Search, Flame, Loader2, AlertTriangle, Trophy, Clock } from 'lucide-react';
 import { getTrendingReports } from '../services/reportService';
 
-// Fallback data for when DB is empty
+// Fallback data
 const FALLBACK_TRENDS = [
   { keyword: "Sustainable Packaging", industry: "Logistics", overall_score: 85, created_at: new Date().toISOString() },
   { keyword: "AI Legal Assistant", industry: "Legal Tech", overall_score: 92, created_at: new Date().toISOString() },
@@ -36,6 +36,16 @@ const TrendingView: React.FC<TrendingViewProps> = ({ onSelectTopic }) => {
     loadTrends();
   }, []);
 
+  // Segment Data
+  // High Pain = Low Sentiment Score (e.g. < 50) -> High Opportunity
+  const highPainOpportunities = trends.filter(t => t.overall_score < 50).slice(0, 3);
+  
+  // Top Rated = High Score
+  const topRated = trends.filter(t => t.overall_score >= 70).slice(0, 3);
+  
+  // Recent = Just the first few
+  const recent = trends.slice(0, 6);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -44,21 +54,17 @@ const TrendingView: React.FC<TrendingViewProps> = ({ onSelectTopic }) => {
     );
   }
 
-  return (
-    <div className="max-w-6xl mx-auto px-4 py-12 animate-fade-in">
-      <div className="text-center mb-12">
-        <div className="inline-flex items-center justify-center p-3 bg-indigo-100 rounded-full mb-4">
-          <Flame className="w-8 h-8 text-indigo-600" />
+  const Section = ({ title, icon: Icon, data, color }: any) => (
+    <div className="mb-12">
+      <div className="flex items-center gap-3 mb-6">
+        <div className={`p-2 rounded-lg ${color} bg-opacity-10`}>
+          <Icon className={`w-6 h-6 ${color.replace('bg-', 'text-')}`} />
         </div>
-        <h2 className="text-3xl font-bold text-slate-900 mb-4">Trending Market Gaps</h2>
-        <p className="text-slate-600 max-w-2xl mx-auto">
-          High-potential opportunities recently identified by the GapSpotter community. 
-          Click any topic to start your own deep dive analysis.
-        </p>
+        <h3 className="text-xl font-bold text-slate-900">{title}</h3>
       </div>
-
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {trends.map((item, index) => (
+        {data.map((item: any, index: number) => (
           <div 
             key={index}
             onClick={() => onSelectTopic(item.keyword)}
@@ -74,22 +80,59 @@ const TrendingView: React.FC<TrendingViewProps> = ({ onSelectTopic }) => {
               </div>
             </div>
 
-            <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors">
+            <h3 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-indigo-600 transition-colors">
               {item.keyword}
             </h3>
 
-            <div className="flex items-center justify-between mt-6">
-              <div className="flex items-center gap-2">
-                <TrendingUp size={16} className={item.overall_score > 80 ? "text-emerald-500" : "text-amber-500"} />
-                <span className="font-bold text-slate-700 text-sm">Score: {item.overall_score}/100</span>
+            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+              <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+                <span className="flex items-center gap-1">
+                  <Search size={12} /> Analyze
+                </span>
               </div>
-              <div className="bg-slate-50 p-2 rounded-full group-hover:bg-indigo-600 group-hover:text-white transition-colors text-slate-400">
-                <Search size={18} />
+              <div className="flex items-center text-indigo-600 font-bold text-xs gap-1 group-hover:translate-x-1 transition-transform">
+                Unlock Report <ArrowRight size={12} />
               </div>
             </div>
           </div>
         ))}
       </div>
+      {data.length === 0 && <p className="text-slate-400 text-sm italic">No opportunities found in this category yet.</p>}
+    </div>
+  );
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-12 animate-fade-in">
+      <div className="text-center mb-16">
+        <div className="inline-flex items-center justify-center p-3 bg-indigo-100 rounded-full mb-4">
+          <Flame className="w-8 h-8 text-indigo-600" />
+        </div>
+        <h2 className="text-3xl font-bold text-slate-900 mb-4">Trending Market Gaps</h2>
+        <p className="text-slate-600 max-w-2xl mx-auto">
+          Discover high-potential opportunities identified by the GapSpotter community.
+        </p>
+      </div>
+
+      <Section 
+        title="High Pain Points (Best Opportunities)" 
+        icon={AlertTriangle} 
+        data={highPainOpportunities} 
+        color="bg-rose-500" 
+      />
+
+      <Section 
+        title="Fresh Discoveries" 
+        icon={Clock} 
+        data={recent} 
+        color="bg-indigo-500" 
+      />
+
+      <Section 
+        title="Top Rated Markets" 
+        icon={Trophy} 
+        data={topRated} 
+        color="bg-emerald-500" 
+      />
     </div>
   );
 };
