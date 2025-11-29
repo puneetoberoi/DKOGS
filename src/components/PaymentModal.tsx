@@ -82,6 +82,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isRefresh ? 'bg-emerald-100' : 'bg-gradient-to-br from-purple-500 to-blue-600'}`}>
@@ -105,9 +106,16 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           </button>
         </div>
 
+        {/* Search Summary - RESTORED */}
         <div className="bg-gray-50 rounded-lg p-4 mb-6">
           <p className="text-sm text-gray-600">
             <span className="font-medium">Keyword:</span> {searchParams.keyword}
+          </p>
+          <p className="text-sm text-gray-600">
+            <span className="font-medium">Sources:</span> {searchParams.sources.length} selected
+          </p>
+          <p className="text-sm text-gray-600">
+            <span className="font-medium">Region:</span> {searchParams.region}
           </p>
           {isRefresh && (
             <p className="text-sm text-emerald-600 font-bold mt-1 flex items-center gap-1">
@@ -116,6 +124,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           )}
         </div>
 
+        {/* Gap Options */}
         <div className="space-y-3 mb-6">
           <label className="text-sm font-medium text-gray-700">
             How many market gaps do you want to discover?
@@ -152,16 +161,19 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           </div>
         </div>
 
+        {/* Currency Notice */}
         <div className="text-xs text-gray-500 text-center mb-4">
           Prices in {locationData.currency} • Your location: {locationData.country}
         </div>
 
+        {/* Error Message */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
             {error}
           </div>
         )}
 
+        {/* Payment Button */}
         <button
           onClick={handlePayment}
           disabled={isProcessing}
@@ -182,6 +194,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           )}
         </button>
 
+        {/* Security Note */}
         <p className="text-xs text-gray-400 text-center mt-4">
           🔒 Secure payment powered by Stripe
         </p>
