@@ -87,6 +87,7 @@ export const analyzeMarket = async (
     const realData = await collectMarketData(params);
     
     console.log(`📊 Collected ${realData.totalDataPoints} real data points`);
+    console.log(`📁 Sources breakdown:`, JSON.stringify(realData.sources, null, 2)); // FORCE READABLE LOG
     
     let externalContext = "";
     const usedSources = ["Gemini 2.0 Flash"];
