@@ -1,102 +1,61 @@
-// src/services/tavilyService.ts
+const API_KEY = import.meta.env.VITE_TAVILY_API_KEY;
 
-import axios from 'axios';
-
-export interface TavilyResult {
-  title: string;
-  url: string;
-  content: string;
-  publishedDate: string;
-  score: number;
-  source: string;
-}
-
-interface DateRange {
-  from: Date;
-  to: Date;
-}
-
-export async function searchTavily(keyword: string, dateRange?: DateRange): Promise<TavilyResult[]> {
-  const apiKey = import.meta.env.VITE_TAVILY_API_KEY;
-  
-  if (!apiKey) {
-    console.log('ℹ️ Tavily: Not configured, skipping');
-    return [];
-  }
-
-  console.log(`🔍 Tavily: Searching for "${keyword}"...`);
+export const searchTavily = async (query: string, depth: 'basic' | 'advanced' = 'basic'): Promise<any[]> => {
+  if (!API_KEY) return [];
 
   try {
-    const response = await axios.post(
-      'https://api.tavily.com/search',
-      {
-        api_key: apiKey,
-        query: `${keyword} complaints problems issues reviews frustrated`,
-        search_depth: 'advanced',
-        include_domains: [
-          'reddit.com',
-          'medium.com',
-          'trustpilot.com',
-          'productreview.com.au',
-          'consumeraffairs.com',
-          'g2.com',
-          'capterra.com'
-        ],
-        max_results: 10,
-        include_answer: false,
-        include_raw_content: false
+    const response = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 15000
-      }
-    );
+      body: JSON.stringify({
+        api_key: API_KEY,
+        query: query,
+        search_depth: depth,
+        include_domains: [],
+        max_results: 10
+      }),
+    });
 
-    if (!response.data?.results) {
-      return [];
-    }
-
-    let results = response.data.results.map((item: any) => ({
-      title: item.title || 'Untitled',
-      url: item.url || '',
-      content: item.content?.substring(0, 500) || '',
-      publishedDate: item.published_date || 'Recent',
-      score: item.score || 0,
-      source: extractSource(item.url)
+    const data = await response.json();
+    return data.results.map((r: any) => ({
+      title: r.title,
+      link: r.url,
+      snippet: r.content,
+      source: 'Tavily Web'
     }));
-
-    // Filter by date if dateRange provided
-    if (dateRange) {
-      results = results.filter((item: TavilyResult) => {
-        if (item.publishedDate === 'Recent') return true;
-        try {
-          const itemDate = new Date(item.publishedDate);
-          return itemDate >= dateRange.from && itemDate <= dateRange.to;
-        } catch {
-          return true; // Include if date parsing fails
-        }
-      });
-    }
-
-    console.log(`✅ Tavily: Found ${results.length} results`);
-    return results;
-
-  } catch (error: any) {
-    console.warn('⚠️ Tavily Error:', error.message);
+  } catch (error) {
+    console.error('Tavily Error:', error);
     return [];
   }
-}
+};
 
-function extractSource(url: string): string {
+// NEW: Dedicated News Search
+export const searchTavilyNews = async (query: string): Promise<any[]> => {
+  if (!API_KEY) return [];
+
   try {
-    const domain = new URL(url).hostname.replace('www.', '');
-    if (domain.includes('reddit.com')) return 'Reddit Discussion';
-    if (domain.includes('medium.com')) return 'Medium Article';
-    if (domain.includes('trustpilot')) return 'Trustpilot Review';
-    if (domain.includes('g2.com')) return 'G2 Review';
-    if (domain.includes('capterra')) return 'Capterra Review';
-    return domain;
-  } catch {
-    return 'Web Article';
+    const response = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: API_KEY,
+        query: query,
+        topic: "news", // Specific topic
+        max_results: 10
+      }),
+    });
+
+    const data = await response.json();
+    return data.results.map((r: any) => ({
+      title: r.title,
+      link: r.url,
+      snippet: r.content,
+      source: 'News & Media'
+    }));
+  } catch (error) {
+    console.error('Tavily News Error:', error);
+    return [];
   }
-}
+};
