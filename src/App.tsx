@@ -402,8 +402,25 @@ const App: React.FC = () => {
   };
 
   const handleTrendingSelect = (topic: string) => {
-    setForm(prev => ({ ...prev, keyword: topic }));
+    // 1. Clear previous report data to prevent "Leak"
+    setReport(null);
+    setStatus(AnalysisStatus.IDLE);
+    setIsDemoMode(false);
+    setIsSaved(false);
+    localStorage.removeItem('current_report');
+
+    // 2. Prepare the form for Deep Dive
+    setForm(prev => ({ 
+      ...prev, 
+      keyword: topic,
+      depth: 'Deep Dive' // FORCE PAID
+    }));
+
+    // 3. Switch to Search view
     setActiveTab('search');
+
+    // 4. FORCE PAYWALL IMMEDIATELY
+    setShowPaymentModal(true);
   };
 
   const runAnalysis = useCallback(async (e?: React.FormEvent) => {
