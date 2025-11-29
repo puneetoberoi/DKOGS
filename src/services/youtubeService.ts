@@ -10,7 +10,6 @@ export interface YouTubeResult {
   source: string;
 }
 
-// Helper to get transcript via our API
 async function getTranscript(videoId: string): Promise<string> {
   try {
     const response = await fetch('/api/transcript', {
@@ -21,7 +20,6 @@ async function getTranscript(videoId: string): Promise<string> {
     const data = await response.json();
     return data.transcript || '';
   } catch (e) {
-    console.warn(`Failed to get transcript for ${videoId}`, e);
     return '';
   }
 }
@@ -30,12 +28,13 @@ export const searchYouTube = async (keyword: string, region: string = 'US'): Pro
   if (!API_KEY) return [];
 
   try {
+    console.log(`🎥 YouTube: Searching for "${keyword}"...`);
     const response = await axios.get(BASE_URL, {
       params: {
         part: 'snippet',
         q: `${keyword} review`,
         type: 'video',
-        maxResults: 3, // Keep low to allow time for transcript fetching
+        maxResults: 20, // INCREASED FROM 3
         key: API_KEY,
         relevanceLanguage: 'en',
         regionCode: region === 'Canada' ? 'CA' : 'US',
@@ -44,12 +43,16 @@ export const searchYouTube = async (keyword: string, region: string = 'US'): Pro
 
     const videos = response.data.items;
 
-    // Fetch transcripts in parallel
-    const resultsWithTranscripts = await Promise.all(videos.map(async (item: any) => {
+    // Process videos: Transcribe only top 3 to save time
+    const resultsWithTranscripts = await Promise.all(videos.map(async (item: any, index: number) => {
       const videoId = item.id.videoId;
-      const transcript = await getTranscript(videoId);
+      let transcript = '';
       
-      // Append transcript to snippet if available
+      // Only transcribe top 3
+      if (index < 3) {
+        transcript = await getTranscript(videoId);
+      }
+      
       const enhancedSnippet = transcript 
         ? `${item.snippet.description}\n\n[VIDEO TRANSCRIPT]: ${transcript}`
         : item.snippet.description;
@@ -58,10 +61,11 @@ export const searchYouTube = async (keyword: string, region: string = 'US'): Pro
         title: item.snippet.title,
         link: `https://www.youtube.com/watch?v=${videoId}`,
         snippet: enhancedSnippet,
-        source: 'YouTube Video & Transcript',
+        source: index < 3 ? 'YouTube Video & Transcript' : 'YouTube Video',
       };
     }));
 
+    console.log(`✅ YouTube: Found ${resultsWithTranscripts.length} videos`);
     return resultsWithTranscripts;
 
   } catch (error) {
