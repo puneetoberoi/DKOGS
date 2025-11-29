@@ -1,7 +1,5 @@
-// src/components/PaymentModal.tsx
-
 import React, { useState } from 'react';
-import { X, CreditCard, Zap, Check, Loader2 } from 'lucide-react';
+import { X, CreditCard, Zap, Check, Loader2, RefreshCw } from 'lucide-react';
 import { getPricing, formatPrice } from '../utils/currencyDetector';
 import type { LocationData } from '../utils/currencyDetector';
 import { createCheckoutSession } from '../services/stripeService';
@@ -17,6 +15,7 @@ interface PaymentModalProps {
     region: string;
     lookbackDays: number;
   };
+  isRefresh?: boolean;
 }
 
 type GapOption = 3 | 5 | 10 | 15;
@@ -26,6 +25,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   onClose,
   locationData,
   searchParams,
+  isRefresh = false,
 }) => {
   const [selectedGaps, setSelectedGaps] = useState<GapOption>(5);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -35,6 +35,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const pricing = getPricing(locationData.currency);
   const gapOptions: GapOption[] = [3, 5, 10, 15];
+
+  const getPrice = (gaps: GapOption) => {
+    const basePrice = pricing[gaps].amount;
+    return isRefresh ? basePrice * 0.5 : basePrice;
+  };
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -48,6 +53,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         sources: searchParams.sources,
         region: searchParams.region,
         lookbackDays: searchParams.lookbackDays,
+        isRefresh: isRefresh
       });
 
       if (!session) {
@@ -58,14 +64,12 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         throw new Error('No checkout URL returned. Please try again.');
       }
 
-      // Store session info for after redirect
       sessionStorage.setItem('pendingAnalysis', JSON.stringify({
         sessionId: session.sessionId,
         gaps: selectedGaps,
         ...searchParams,
       }));
 
-      // Redirect to Stripe Checkout URL directly
       window.location.href = session.url;
 
     } catch (err) {
@@ -78,15 +82,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl">
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" />
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isRefresh ? 'bg-emerald-100' : 'bg-gradient-to-br from-purple-500 to-blue-600'}`}>
+              {isRefresh ? <RefreshCw className="w-5 h-5 text-emerald-600" /> : <Zap className="w-5 h-5 text-white" />}
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Deep Dive Analysis</h2>
-              <p className="text-sm text-gray-500">Select your market gap depth</p>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {isRefresh ? 'Refresh Intelligence' : 'Deep Dive Analysis'}
+              </h2>
+              <p className="text-sm text-gray-500">
+                {isRefresh ? 'Update stale data with fresh insights' : 'Select your market gap depth'}
+              </p>
             </div>
           </div>
           <button
@@ -98,20 +105,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           </button>
         </div>
 
-        {/* Search Summary */}
         <div className="bg-gray-50 rounded-lg p-4 mb-6">
           <p className="text-sm text-gray-600">
             <span className="font-medium">Keyword:</span> {searchParams.keyword}
           </p>
-          <p className="text-sm text-gray-600">
-            <span className="font-medium">Sources:</span> {searchParams.sources.length} selected
-          </p>
-          <p className="text-sm text-gray-600">
-            <span className="font-medium">Market Region:</span> {searchParams.region}
-          </p>
+          {isRefresh && (
+            <p className="text-sm text-emerald-600 font-bold mt-1 flex items-center gap-1">
+              <Check className="w-4 h-4" /> 50% Discount Applied
+            </p>
+          )}
         </div>
 
-        {/* Gap Options */}
         <div className="space-y-3 mb-6">
           <label className="text-sm font-medium text-gray-700">
             How many market gaps do you want to discover?
@@ -135,31 +139,35 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 )}
                 <div className="text-2xl font-bold text-gray-900">{gaps}</div>
                 <div className="text-sm text-gray-600">Market Gaps</div>
-                <div className="text-lg font-semibold text-blue-600 mt-1">
-                  {formatPrice(pricing[gaps].amount, locationData.currency)}
+                <div className="text-lg font-semibold text-blue-600 mt-1 flex items-center gap-2">
+                  {formatPrice(getPrice(gaps), locationData.currency)}
+                  {isRefresh && (
+                    <span className="text-xs text-slate-400 line-through font-normal">
+                      {formatPrice(pricing[gaps].amount, locationData.currency)}
+                    </span>
+                  )}
                 </div>
               </button>
             ))}
           </div>
         </div>
 
-        {/* Currency Notice - FIXED: Shows IP-detected location, not user-selected region */}
         <div className="text-xs text-gray-500 text-center mb-4">
           Prices in {locationData.currency} • Your location: {locationData.country}
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
             {error}
           </div>
         )}
 
-        {/* Payment Button */}
         <button
           onClick={handlePayment}
           disabled={isProcessing}
-          className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2 hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`w-full py-3 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+            isRefresh ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700'
+          }`}
         >
           {isProcessing ? (
             <>
@@ -168,13 +176,12 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             </>
           ) : (
             <>
-              <CreditCard className="w-5 h-5" />
-              Pay {formatPrice(pricing[selectedGaps].amount, locationData.currency)}
+              {isRefresh ? <RefreshCw className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
+              Pay {formatPrice(getPrice(selectedGaps), locationData.currency)}
             </>
           )}
         </button>
 
-        {/* Security Note */}
         <p className="text-xs text-gray-400 text-center mt-4">
           🔒 Secure payment powered by Stripe
         </p>
