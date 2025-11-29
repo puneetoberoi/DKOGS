@@ -401,26 +401,25 @@ const App: React.FC = () => {
     });
   };
 
-  const handleTrendingSelect = (topic: string) => {
-    // 1. Clear previous report data to prevent "Leak"
+    const handleTrendingSelect = (topic: string) => {
+    // 1. Clear previous report data
     setReport(null);
     setStatus(AnalysisStatus.IDLE);
     setIsDemoMode(false);
     setIsSaved(false);
     localStorage.removeItem('current_report');
 
-    // 2. Prepare the form for Deep Dive
+    // 2. Pre-fill form
     setForm(prev => ({ 
       ...prev, 
       keyword: topic,
-      depth: 'Deep Dive' // FORCE PAID
+      depth: 'Deep Dive' // Encouraged default
     }));
 
-    // 3. Switch to Search view
+    // 3. Go to search screen (User clicks Scan -> Pay)
     setActiveTab('search');
-
-    // 4. FORCE PAYWALL IMMEDIATELY
-    setShowPaymentModal(true);
+    
+    // REMOVED: setShowPaymentModal(true); 
   };
 
   const runAnalysis = useCallback(async (e?: React.FormEvent) => {
