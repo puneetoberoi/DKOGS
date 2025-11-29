@@ -1,21 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { getSavedReports, deleteReport, type SavedReportItem } from '../services/reportService';
 import { User } from '@supabase/supabase-js';
-import { Loader2, Search, Trash2, Calendar, TrendingUp, ArrowRight, FolderOpen, CheckSquare, Square, BarChart2, X } from 'lucide-react';
+import { Loader2, Search, Trash2, Calendar, TrendingUp, ArrowRight, FolderOpen, CheckSquare, Square, BarChart2, X, RefreshCw, AlertTriangle } from 'lucide-react';
 import type { MarketReport } from '../schema';
 
 interface DashboardViewProps {
   user: User;
   onViewReport: (report: MarketReport) => void;
   onStartNewSearch: () => void;
-  onCompare: (reports: MarketReport[]) => void; // New Prop
+  onCompare: (reports: MarketReport[]) => void;
+  onRefreshReport: (report: MarketReport) => void;
 }
 
-const DashboardView: React.FC<DashboardViewProps> = ({ user, onViewReport, onStartNewSearch, onCompare }) => {
+const DashboardView: React.FC<DashboardViewProps> = ({ user, onViewReport, onStartNewSearch, onCompare, onRefreshReport }) => {
   const [reports, setReports] = useState<SavedReportItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]); // New State
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const fetchReports = async () => {
     setLoading(true);
@@ -63,6 +64,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onViewReport, onSta
       .filter(r => selectedIds.includes(r.id))
       .map(r => r.report_data);
     onCompare(selectedReports);
+  };
+
+  const getDecayStatus = (dateString: string) => {
+    const created = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - created.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    
+    const isStale = diffDays > 30;
+    const grayPercent = Math.min(100, (diffDays / 30) * 100);
+    
+    return { diffDays, isStale, grayPercent };
   };
 
   if (loading) {
@@ -123,14 +136,23 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onViewReport, onSta
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {reports.map((report) => {
           const isSelected = selectedIds.includes(report.id);
+          const { diffDays, isStale, grayPercent } = getDecayStatus(report.created_at);
+
           return (
             <div 
               key={report.id}
               onClick={() => onViewReport(report.report_data)}
-              className={`group bg-white rounded-xl border p-5 cursor-pointer transition-all duration-200 relative overflow-hidden ${
+              style={{ filter: `grayscale(${grayPercent}%)` }}
+              className={`group bg-white rounded-xl border p-5 cursor-pointer transition-all duration-500 relative overflow-hidden ${
                 isSelected ? 'border-indigo-500 shadow-md ring-1 ring-indigo-500' : 'border-slate-200 hover:border-indigo-300 hover:shadow-md'
-              }`}
+              } ${isStale ? 'opacity-80' : ''}`}
             >
+              {isStale && (
+                <div className="absolute top-0 right-0 bg-slate-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg z-10 flex items-center gap-1">
+                  <AlertTriangle size={10} /> STALE ({diffDays} days)
+                </div>
+              )}
+
               <div className={`absolute top-0 left-0 w-1 h-full ${
                 report.overall_score >= 80 ? 'bg-emerald-500' : 
                 report.overall_score >= 60 ? 'bg-amber-500' : 'bg-rose-500'
@@ -173,15 +195,28 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onViewReport, onSta
                 </div>
               </div>
 
-              <div className="flex items-center text-indigo-600 text-sm font-medium group-hover:translate-x-1 transition-transform duration-200 pl-2">
-                View Report <ArrowRight size={16} className="ml-1" />
+              <div className="flex justify-between items-center pl-2">
+                <div className="flex items-center text-indigo-600 text-sm font-medium group-hover:translate-x-1 transition-transform duration-200">
+                  View Report <ArrowRight size={16} className="ml-1" />
+                </div>
+                
+                {diffDays > 30 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRefreshReport(report.report_data);
+                    }}
+                    className="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-200 transition-colors flex items-center gap-1 z-20 relative"
+                  >
+                    <RefreshCw size={12} /> Refresh (-50%)
+                  </button>
+                )}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Floating Comparison Bar */}
       {selectedIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-6 z-50 animate-in slide-in-from-bottom-4 fade-in">
           <span className="font-medium text-sm">{selectedIds.length} Selected</span>
