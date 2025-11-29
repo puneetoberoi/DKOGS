@@ -41,7 +41,7 @@ const TrendingView: React.FC<TrendingViewProps> = ({ onSelectTopic }) => {
   const highPainOpportunities = trends.filter(t => t.overall_score < 60).slice(0, 3);
   
   // Top Rated = High Score
-  const topRated = trends.filter(t => t.overall_score >= 70).slice(0, 3);
+  const topRated = trends.filter(t => t.overall_score >= 60).slice(0, 3);
   
   // Recent = Just the first few
   const recent = trends.slice(0, 6);
