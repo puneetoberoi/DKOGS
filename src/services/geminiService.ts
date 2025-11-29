@@ -87,7 +87,7 @@ export const analyzeMarket = async (
     const realData = await collectMarketData(params);
     
     console.log(`📊 Collected ${realData.totalDataPoints} real data points`);
-    console.log(`📁 Sources breakdown:`, JSON.stringify(realData.sources, null, 2)); // FORCE READABLE LOG
+    console.log(`📁 Sources breakdown:`, JSON.stringify(realData.sources, null, 2)); 
     
     let externalContext = "";
     const usedSources = ["Gemini 2.0 Flash"];
@@ -131,6 +131,15 @@ export const analyzeMarket = async (
       2. UNMET NEEDS: Focus on what is MISSING. Look for complaints ("hate", "broken", "wish"), negative sentiment, and feature requests in the data.
       3. QUOTES: The 'analyzedSamples' array MUST contain verbatim quotes from the data. Do not paraphrase.
       4. ESTIMATION: If specific numbers (market size, trends) are not in the text, infer reasonable estimates based on the context and label them as "(estimated)".
+      
+      ## SCORING RUBRIC (PRECISION REQUIRED)
+      - ACT AS AN ALGORITHM: Do not round scores to the nearest 5 or 10. "63" is better than "65".
+      - CALCULATE: Base the score on the ratio of positive to negative sentiment in the text snippets.
+      - 0-30 (CRITICAL): Market is broken. Users are angry.
+      - 31-50 (POOR): Users are frustrated. Poor quality.
+      - 51-65 (AVERAGE): Products work but are boring.
+      - 66-80 (GOOD): Users are satisfied.
+      - 81-100 (EXCELLENT): Cult following.
       
       ## FIELD INSTRUCTIONS
       - GAPS: Identify exactly ${gapCount} distinct market opportunities. If fewer are found, create specific variations based on user pain points.
