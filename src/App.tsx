@@ -5,7 +5,7 @@ import { AnalysisStatus } from './schema';
 import type { SearchParams, MarketReport } from './schema';
 import { analyzeMarket } from './services/geminiService';
 import { generateDemoReport } from './services/demoService';
-import { saveReport, getReportById } from './services/reportService'; // Added getReportById
+import { saveReport, getReportById } from './services/reportService';
 import LoadingScreen from './components/LoadingScreen';
 import ResultsDashboard from './components/ResultsDashboard';
 import TrendingView from './components/TrendingView';
@@ -107,31 +107,28 @@ const App: React.FC = () => {
   const [pendingSave, setPendingSave] = useState(false);
   const [comparisonReports, setComparisonReports] = useState<MarketReport[]>([]);
   const [isSaved, setIsSaved] = useState(false);
+  const [isRefresh, setIsRefresh] = useState(false); // NEW STATE
 
-  // PERSISTENCE: Save to local storage
   useEffect(() => {
     if (report) {
       localStorage.setItem('current_report', JSON.stringify(report));
     }
   }, [report]);
 
-  // PERSISTENCE: Restore on mount OR load from URL ID
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const viewReportId = urlParams.get('view_report');
     
-    // PRIORITY 1: Load from URL (Admin/Email Link)
     if (viewReportId) {
       console.log('Loading report from URL:', viewReportId);
-      setStatus(AnalysisStatus.SCRAPING); // Fake loading state
+      setStatus(AnalysisStatus.SCRAPING);
       
       getReportById(viewReportId).then(result => {
         if (result.success && result.data) {
           setReport(result.data as MarketReport);
           setStatus(AnalysisStatus.COMPLETE);
           setIsDemoMode(false);
-          setIsSaved(true); // Loaded from DB, so it is saved
-          // Clean URL
+          setIsSaved(true);
           window.history.replaceState({}, '', window.location.pathname);
         } else {
           console.error('Failed to load report from URL');
@@ -139,10 +136,9 @@ const App: React.FC = () => {
           setStatus(AnalysisStatus.IDLE);
         }
       });
-      return; // Skip local storage check if URL present
+      return;
     }
 
-    // PRIORITY 2: Load from Local Storage (Refresh)
     const savedReport = localStorage.getItem('current_report');
     const savedIsDemoMode = localStorage.getItem('is_demo_mode');
     
@@ -260,6 +256,17 @@ const App: React.FC = () => {
     setIsSaved(true);
   };
 
+  // NEW: Handle Refresh Logic
+  const handleRefreshReport = (oldReport: MarketReport) => {
+    setForm(prev => ({
+      ...prev,
+      keyword: oldReport.keyword,
+      // Keep other form defaults or hydrate from oldReport if desired
+    }));
+    setIsRefresh(true);
+    setShowPaymentModal(true);
+  };
+
   const handleCompare = (reports: MarketReport[]) => {
     setComparisonReports(reports);
     setActiveTab('comparison');
@@ -279,6 +286,7 @@ const App: React.FC = () => {
     setStatus(AnalysisStatus.IDLE);
     setIsDemoMode(false);
     setIsSaved(false);
+    setIsRefresh(false); // Reset refresh
     localStorage.removeItem('current_report');
     
     setForm(prev => ({ 
@@ -300,6 +308,7 @@ const App: React.FC = () => {
     setStatus(AnalysisStatus.IDLE);
     setIsDemoMode(false);
     setIsSaved(false);
+    setIsRefresh(false); // Reset refresh
     setForm(prev => ({ ...prev, keyword: '' }));
     localStorage.removeItem('current_report'); 
   };
@@ -394,6 +403,7 @@ const App: React.FC = () => {
     setStatus(AnalysisStatus.SCRAPING);
     setIsDemoMode(true);
     setIsSaved(false);
+    setIsRefresh(false);
 
     try {
       await new Promise(r => setTimeout(r, 1000));
@@ -590,6 +600,7 @@ const App: React.FC = () => {
           region: form.geography,
           lookbackDays: form.lookback === 'Last 30 Days' ? 30 : form.lookback === 'Last 6 Months' ? 180 : form.lookback === 'Last Year' ? 365 : 730,
         }}
+        isRefresh={isRefresh}
       />
 
       <AuthModal 
@@ -655,6 +666,7 @@ const App: React.FC = () => {
               onViewReport={handleViewReport} 
               onStartNewSearch={handleStartNewSearch}
               onCompare={handleCompare}
+              onRefreshReport={handleRefreshReport}
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-96 text-center">
