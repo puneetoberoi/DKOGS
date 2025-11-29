@@ -1,4 +1,4 @@
-import { searchTavily, searchTavilyNews } from './tavilyService';
+import { searchTavily, searchTavilyNews, searchReddit } from './tavilyService'; // Added searchReddit
 import { searchYouTube } from './youtubeService';
 import { searchSerper } from './serperService';
 import { searchHackerNews } from './hackerNewsService';
@@ -15,16 +15,12 @@ export const collectMarketData = async (params: SearchParams): Promise<Aggregate
   
   const isDeepDive = params.depth === 'Deep Dive';
 
-  // Helper to map lookback string to API expected format if needed
-  // Assuming DateRange is a string union type, casting params.lookback usually works if aligned
-  // If not, we cast to any to unblock build.
-  
   try {
-    const [tavilyResults, newsResults, youtubeResults, serperResults, hnResults] = await Promise.all([
+    const [tavilyResults, newsResults, redditResults, youtubeResults, serperResults, hnResults] = await Promise.all([
       searchTavily(`${params.keyword} market trends problems`, isDeepDive ? 'advanced' : 'basic'),
       searchTavilyNews(`${params.keyword} industry news`),
-      // FIX: Use lookback instead of geography, and cast to any to satisfy strict TS
-      searchYouTube(params.keyword, params.lookback as any), 
+      searchReddit(`${params.keyword} complaints reviews`), // NEW
+      searchYouTube(params.keyword, params.geography), // Includes Transcripts now
       searchSerper(`${params.keyword} reviews and complaints`, params.geography),
       searchHackerNews(params.keyword)
     ]);
@@ -32,6 +28,7 @@ export const collectMarketData = async (params: SearchParams): Promise<Aggregate
     const allResults = [
       ...tavilyResults,
       ...newsResults,
+      ...redditResults,
       ...youtubeResults,
       ...serperResults,
       ...hnResults
@@ -49,6 +46,7 @@ export const collectMarketData = async (params: SearchParams): Promise<Aggregate
       sources: {
         tavily: tavilyResults.length,
         news: newsResults.length,
+        reddit: redditResults.length,
         youtube: youtubeResults.length,
         google: serperResults.length,
         hackernews: hnResults.length
