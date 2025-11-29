@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, ArrowRight, Search, Flame, Loader2, AlertTriangle, Trophy, Clock } from 'lucide-react';
+import { TrendingUp, ArrowRight, Search, Flame, Loader2, AlertTriangle, Trophy, Clock, Lock } from 'lucide-react';
 import { getTrendingReports } from '../services/reportService';
 
 // Fallback data
@@ -36,14 +36,9 @@ const TrendingView: React.FC<TrendingViewProps> = ({ onSelectTopic }) => {
     loadTrends();
   }, []);
 
-  // Segment Data
-  // High Pain = Low Sentiment Score (e.g. < 50) -> High Opportunity
+  // Segment Data (Using wider filters to ensure data shows)
   const highPainOpportunities = trends.filter(t => t.overall_score < 60).slice(0, 3);
-  
-  // Top Rated = High Score
   const topRated = trends.filter(t => t.overall_score >= 60).slice(0, 3);
-  
-  // Recent = Just the first few
   const recent = trends.slice(0, 6);
 
   if (loading) {
@@ -70,28 +65,37 @@ const TrendingView: React.FC<TrendingViewProps> = ({ onSelectTopic }) => {
             onClick={() => onSelectTopic(item.keyword)}
             className="group bg-white rounded-xl border border-slate-200 p-6 cursor-pointer hover:border-indigo-400 hover:shadow-lg transition-all duration-300 relative overflow-hidden"
           >
-            <div className="absolute top-0 right-0 bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded-bl-lg">
-              {new Date(item.created_at).toLocaleDateString()}
-            </div>
-
+            {/* Top Section: Visible */}
             <div className="flex justify-between items-start mb-4">
               <div className="bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
                 {item.industry || 'General'}
               </div>
             </div>
 
-            <h3 className="text-xl font-bold text-slate-900 mb-4 group-hover:text-indigo-600 transition-colors">
+            <h3 className="text-xl font-bold text-slate-900 mb-8 group-hover:text-indigo-600 transition-colors">
               {item.keyword}
             </h3>
 
-            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-              <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
-                <span className="flex items-center gap-1">
-                  <Search size={12} /> Analyze
-                </span>
+            {/* Bottom Section: Blurred Paywall */}
+            <div className="absolute bottom-0 left-0 w-full h-20 overflow-hidden">
+              {/* The Blurred Content */}
+              <div className="px-6 pt-2 filter blur-sm opacity-50 select-none">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp size={16} className="text-slate-400" />
+                    <span className="font-bold text-slate-400 text-sm">Score: ??/100</span>
+                  </div>
+                  <div className="bg-slate-50 p-2 rounded-full text-slate-300">
+                    <Search size={18} />
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center text-indigo-600 font-bold text-xs gap-1 group-hover:translate-x-1 transition-transform">
-                Unlock Report <ArrowRight size={12} />
+
+              {/* The Paywall Overlay */}
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-white via-white/90 to-transparent">
+                <div className="bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-md flex items-center gap-2 group-hover:scale-105 transition-transform">
+                  <Lock size={12} /> Run a fresh report
+                </div>
               </div>
             </div>
           </div>
