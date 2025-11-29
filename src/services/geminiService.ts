@@ -134,6 +134,7 @@ export const analyzeMarket = async (
       
       ## FIELD INSTRUCTIONS
       - GAPS: Identify exactly ${gapCount} distinct market opportunities. If fewer are found, create specific variations based on user pain points.
+      - PAIN POINTS: Provide at least 3 specific, distinct pain points for EACH gap.
       - COMPETITORS: Extract explicit brand names found in the text.
       - TRENDS: Generate trend data for years 2021-2025 based on the sentiment trajectory in the data.
       - SEARCH VOLUME: Return a specific number or range string (e.g., "12,500/mo"). Infer from context if necessary.
