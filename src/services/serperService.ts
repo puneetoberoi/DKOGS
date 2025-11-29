@@ -25,7 +25,7 @@ export const searchSerper = async (query: string, region: string = 'us'): Promis
       body: JSON.stringify({
         q: query,
         gl: gl,
-        num: 50 // Attempt 50
+        num: 50
       })
     });
 
@@ -52,6 +52,30 @@ export const searchSerper = async (query: string, region: string = 'us'): Promis
           link: item.link || '',
           snippet: item.snippet || 'Common Question',
           source: 'Google People Also Ask'
+        });
+      });
+    }
+
+    // 3. Google Ads (Who is paying?)
+    if (data.ads) {
+      data.ads.forEach((item: any) => {
+        results.push({
+          title: item.title,
+          link: item.link,
+          snippet: item.description || 'Paid Advertisement',
+          source: 'Google Ad (Competitor)'
+        });
+      });
+    }
+
+    // 4. Shopping Results (E-commerce competitors)
+    if (data.shopping) {
+      data.shopping.forEach((item: any) => {
+        results.push({
+          title: item.title,
+          link: item.link,
+          snippet: `${item.price} from ${item.source}`,
+          source: 'Google Shopping Ad'
         });
       });
     }
