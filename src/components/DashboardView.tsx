@@ -230,7 +230,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onViewReport, onSta
                     }}
                     className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors flex items-center gap-1 shadow-lg"
                   >
-                    <RefreshCw size={12} /> Update (-50%)
+                    <RefreshCw size={12} /> Refresh Data with 50% off!
                   </button>
                 </div>
               )}
