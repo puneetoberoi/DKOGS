@@ -108,9 +108,10 @@ export const analyzeMarket = async (
 
     if (onStatusUpdate) onStatusUpdate(AnalysisStatus.CLUSTERING);
 
-    const prompt = `
-      You are GapSpotter, an expert Market Researcher specializing in ${params.geography} markets.
+        const prompt = `
+      Act as a world-class GapSpotter specializing in market research for ${params.geography}. 
       
+      ## CONTEXT
       ANALYSIS TARGET: "${params.keyword}"
       GEOGRAPHY: ${params.geography}
       TIME PERIOD: ${params.lookback}
@@ -122,23 +123,23 @@ export const analyzeMarket = async (
       === EXTERNAL AI ANALYSIS ===
       ${externalContext || "No additional AI context available"}
       
-      TASK:
+      ## TASK
       Generate a structured market report based STRICTLY on the REAL MARKET DATA provided above.
       
-      CRITICAL INSTRUCTIONS:
-      1. Generate EXACTLY ${gapCount} market gaps/opportunities. NO MORE, NO LESS. This is mandatory.
-      2. If you cannot find ${gapCount} distinct gaps, create variations or sub-categories to reach exactly ${gapCount}.
-      3. Competitors: Extract specific brand names mentioned in the data.
-      4. Evidence: The 'analyzedSamples' array MUST contain direct quotes from the provided data.
-      5. Trends: Generate exactly 5 years of trend data (${new Date().getFullYear() - 4} to ${new Date().getFullYear()}).
-      6. Scores: All scores must be integers between 0-100.
-      7. Focus analysis on ${params.geography} market specifically.
-      8. Include regulatory/compliance considerations for ${params.geography}.
+      ## CRITICAL RULES (ZERO HALLUCINATION)
+      1. SOURCE OF TRUTH: Analyze ONLY the text provided in the REAL MARKET DATA block. Do not invent competitors or statistics.
+      2. UNMET NEEDS: Focus on what is MISSING. Look for complaints ("hate", "broken", "wish"), negative sentiment, and feature requests in the data.
+      3. QUOTES: The 'analyzedSamples' array MUST contain verbatim quotes from the data. Do not paraphrase.
+      4. ESTIMATION: If specific numbers (market size, trends) are not in the text, infer reasonable estimates based on the context and label them as "(estimated)".
       
-      FORMATTING RULES:
-      9. SEARCH VOLUME: Must be a specific number or range string (e.g., "12,500/mo" or "10k-50k/mo"). DO NOT use vague terms like "High", "Medium", "Low". Estimate based on market data if exact number unavailable.
-      10. SOURCES: Return ONLY the platform name (e.g., "YouTube", "Reddit", "TechCrunch"), NOT full URLs. Group multiple URLs into their platform name.
-      11. RECOMMENDATIONS: Suggest 3 specific, related niche market keywords that an entrepreneur should analyze next. Include a short reason why.
+      ## FIELD INSTRUCTIONS
+      - GAPS: Identify exactly ${gapCount} distinct market opportunities. If fewer are found, create specific variations based on user pain points.
+      - COMPETITORS: Extract explicit brand names found in the text.
+      - TRENDS: Generate trend data for years 2021-2025 based on the sentiment trajectory in the data.
+      - SEARCH VOLUME: Return a specific number or range string (e.g., "12,500/mo"). Infer from context if necessary.
+      - SOURCES: Return ONLY platform names (e.g., "Reddit", "YouTube"), not URLs.
+      - RECOMMENDATIONS: Suggest 3 specific related niche keywords.
+      - COMPETITION DENSITY: Must be one of: "Low", "Medium", "High", "Saturated". Infer this based on the number of competitors mentioned.
     `;
 
     const schema = {
