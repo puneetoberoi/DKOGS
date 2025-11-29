@@ -9,14 +9,13 @@ export interface SearchResult {
 
 export const searchSerper = async (query: string, region: string = 'us'): Promise<SearchResult[]> => {
   if (!API_KEY) {
-    console.warn('Serper API key missing');
     return [];
   }
 
   const gl = region.toLowerCase() === 'canada' ? 'ca' : 'us';
 
   try {
-    console.log(`🔍 Serper: Searching for "${query}"...`); // ADD LOG
+    console.log(`🔍 Serper: Searching for "${query}"...`);
     const response = await fetch('https://google.serper.dev/search', {
       method: 'POST',
       headers: {
@@ -26,22 +25,38 @@ export const searchSerper = async (query: string, region: string = 'us'): Promis
       body: JSON.stringify({
         q: query,
         gl: gl,
-        num: 100 // MAX DATA
+        num: 50 // Attempt 50
       })
     });
 
     const data = await response.json();
-    
-    if (!data.organic) return [];
+    const results: SearchResult[] = [];
 
-    const results = data.organic.map((item: any) => ({
-      title: item.title,
-      link: item.link,
-      snippet: item.snippet || '',
-      source: 'Google Search (Serper)'
-    }));
-    
-    console.log(`✅ Serper: Found ${results.length} results`); // ADD LOG
+    // 1. Organic Results
+    if (data.organic) {
+      data.organic.forEach((item: any) => {
+        results.push({
+          title: item.title,
+          link: item.link,
+          snippet: item.snippet || '',
+          source: 'Google Search (Serper)'
+        });
+      });
+    }
+
+    // 2. People Also Ask (High Value for Gaps)
+    if (data.peopleAlsoAsk) {
+      data.peopleAlsoAsk.forEach((item: any) => {
+        results.push({
+          title: item.question,
+          link: item.link || '',
+          snippet: item.snippet || 'Common Question',
+          source: 'Google People Also Ask'
+        });
+      });
+    }
+
+    console.log(`✅ Serper: Found ${results.length} combined results`);
     return results;
 
   } catch (error) {
