@@ -54,8 +54,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const sources = body.sources || [];
     const region = body.region || '';
     const lookbackDays = body.lookbackDays || 30;
+    const isRefresh = body.isRefresh === true;
 
-    console.log('Request received:', { gaps, currency, keyword, region });
+    console.log('Request received:', { gaps, currency, keyword, isRefresh });
 
     if (![3, 5, 10, 15].includes(gaps)) {
       return res.status(400).json({ error: 'Invalid gap count' });
@@ -66,9 +67,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const pricing = PRICING[currency as Currency][gaps as GapCount];
+    
+    // Discount Logic
+    const finalAmount = isRefresh ? Math.round(pricing.amount * 0.5) : pricing.amount;
+    const finalLabel = isRefresh ? `${pricing.label} (Refresh 50% Off)` : pricing.label;
+
     const origin = req.headers.origin || 'https://dkogs.vercel.app';
 
-    console.log('Creating Stripe session:', { currency, amount: pricing.amount, origin });
+    console.log('Creating Stripe session:', { currency, amount: finalAmount, isRefresh });
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -77,10 +83,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           price_data: {
             currency: currency.toLowerCase(),
             product_data: {
-              name: 'GapSpotter Market Analysis',
-              description: pricing.label,
+              name: isRefresh ? 'Market Report Refresh' : 'GapSpotter Market Analysis',
+              description: finalLabel,
             },
-            unit_amount: pricing.amount,
+            unit_amount: finalAmount,
           },
           quantity: 1,
         },
@@ -95,6 +101,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         lookbackDays: String(lookbackDays),
         gaps: String(gaps),
         currency: String(currency),
+        isRefresh: String(isRefresh),
       },
     });
 
