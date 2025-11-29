@@ -126,8 +126,7 @@ export const DataTransparencyBanner: React.FC = () => (
           📊 DATA TRANSPARENCY NOTICE
         </h4>
         <p className="text-xs text-amber-700 leading-relaxed">
-          This analysis combines real data from public sources (web articles, 
-          YouTube comments, business reviews) with AI-powered interpretation. 
+          This analysis combines real data from public sources with AI-powered interpretation. 
           While we strive for accuracy, AI analysis may contain errors, biases, 
           or incomplete information. This is a research tool, not professional advice. 
           Always conduct independent due diligence.
