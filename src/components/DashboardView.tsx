@@ -70,11 +70,13 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onViewReport, onSta
     const created = new Date(dateString);
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - created.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); 
     
     const isStale = diffDays > 30;
+    // Calculate gray percentage: 0% at day 0, 100% at day 30
     const grayPercent = Math.min(100, (diffDays / 30) * 100);
     
+    console.log(`Report Age: ${diffDays} days. Decay: ${grayPercent}%`); // Debug Log
     return { diffDays, isStale, grayPercent };
   };
 
@@ -141,77 +143,90 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, onViewReport, onSta
           return (
             <div 
               key={report.id}
-              onClick={() => onViewReport(report.report_data)}
-              style={{ filter: `grayscale(${grayPercent}%)` }}
-              className={`group bg-white rounded-xl border p-5 cursor-pointer transition-all duration-500 relative overflow-hidden ${
+              className={`group relative bg-white rounded-xl border p-5 cursor-pointer transition-all duration-500 overflow-hidden ${
                 isSelected ? 'border-indigo-500 shadow-md ring-1 ring-indigo-500' : 'border-slate-200 hover:border-indigo-300 hover:shadow-md'
-              } ${isStale ? 'opacity-80' : ''}`}
+              } ${isStale ? 'opacity-90' : ''}`}
+              onClick={() => onViewReport(report.report_data)}
             >
+              {/* DECAY WRAPPER: Apply grayscale only to content, not to the refresh button */}
+              <div style={{ filter: `grayscale(${grayPercent}%)` }} className="transition-all duration-500">
+                
+                {/* Stale Badge (Inside gray because it should look old?) No, badge should be alert color. Move out? */}
+                {/* Keeping badge inside for now, but alert color usually punches through gray partially */}
+                
+                <div className={`absolute top-0 left-0 w-1 h-full ${
+                  report.overall_score >= 80 ? 'bg-emerald-500' : 
+                  report.overall_score >= 60 ? 'bg-amber-500' : 'bg-rose-500'
+                }`}></div>
+
+                <div className="flex justify-between items-start mb-4 pl-2">
+                  <div className="bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
+                    {report.industry || 'Market Report'}
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={(e) => toggleSelection(report.id, e)}
+                      className={`p-1 transition-colors ${isSelected ? 'text-indigo-600' : 'text-slate-300 hover:text-indigo-500'}`}
+                      title="Select to Compare"
+                    >
+                      {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
+                    </button>
+                    <button 
+                      onClick={(e) => handleDelete(report.id, e)}
+                      className="text-slate-300 hover:text-rose-500 transition-colors p-1"
+                      title="Delete Report"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-1 group-hover:text-indigo-600 transition-colors pl-2">
+                  {report.keyword}
+                </h3>
+
+                <div className="flex items-center gap-4 text-sm text-slate-500 mb-6 pl-2">
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp size={14} />
+                    <span className="font-semibold text-slate-700">{report.overall_score}/100</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Calendar size={14} />
+                    <span>{new Date(report.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pl-2">
+                  <div className="flex items-center text-indigo-600 text-sm font-medium group-hover:translate-x-1 transition-transform duration-200">
+                    View Report <ArrowRight size={16} className="ml-1" />
+                  </div>
+                </div>
+              </div>
+
+              {/* ELEMENTS OUTSIDE GRAYSCALE WRAPPER */}
+              
+              {/* Stale Badge - Kept outside to stay Red */}
               {isStale && (
-                <div className="absolute top-0 right-0 bg-slate-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg z-10 flex items-center gap-1">
-                  <AlertTriangle size={10} /> STALE ({diffDays} days)
+                <div className="absolute top-0 right-0 bg-rose-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg z-10 flex items-center gap-1 shadow-sm">
+                  <AlertTriangle size={10} /> STALE ({diffDays}d)
                 </div>
               )}
 
-              <div className={`absolute top-0 left-0 w-1 h-full ${
-                report.overall_score >= 80 ? 'bg-emerald-500' : 
-                report.overall_score >= 60 ? 'bg-amber-500' : 'bg-rose-500'
-              }`}></div>
-
-              <div className="flex justify-between items-start mb-4 pl-2">
-                <div className="bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
-                  {report.industry || 'Market Report'}
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={(e) => toggleSelection(report.id, e)}
-                    className={`p-1 transition-colors ${isSelected ? 'text-indigo-600' : 'text-slate-300 hover:text-indigo-500'}`}
-                    title="Select to Compare"
-                  >
-                    {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
-                  </button>
-                  <button 
-                    onClick={(e) => handleDelete(report.id, e)}
-                    className="text-slate-300 hover:text-rose-500 transition-colors p-1"
-                    title="Delete Report"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-
-              <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-1 group-hover:text-indigo-600 transition-colors pl-2">
-                {report.keyword}
-              </h3>
-
-              <div className="flex items-center gap-4 text-sm text-slate-500 mb-6 pl-2">
-                <div className="flex items-center gap-1.5">
-                  <TrendingUp size={14} />
-                  <span className="font-semibold text-slate-700">{report.overall_score}/100</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Calendar size={14} />
-                  <span>{new Date(report.created_at).toLocaleDateString()}</span>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center pl-2">
-                <div className="flex items-center text-indigo-600 text-sm font-medium group-hover:translate-x-1 transition-transform duration-200">
-                  View Report <ArrowRight size={16} className="ml-1" />
-                </div>
-                
-                {diffDays > 30 && (
+              {/* Refresh Button - Vibrant and clickable */}
+              {/* Condition: diffDays > 30 for Prod. You can lower to > 0 to test visual. */}
+              {diffDays > 30 && (
+                <div className="absolute bottom-4 right-4 z-20">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onRefreshReport(report.report_data);
                     }}
-                    className="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-200 transition-colors flex items-center gap-1 z-20 relative"
+                    className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors flex items-center gap-1 shadow-lg animate-pulse"
                   >
-                    <RefreshCw size={12} /> Refresh (-50%)
+                    <RefreshCw size={12} /> Update (-50%)
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           );
         })}
