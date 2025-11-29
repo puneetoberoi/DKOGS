@@ -1,4 +1,4 @@
-import { searchTavily, searchTavilyNews, searchReddit } from './tavilyService'; // Added searchReddit
+import { searchTavily, searchTavilyNews, searchReddit } from './tavilyService';
 import { searchYouTube } from './youtubeService';
 import { searchSerper } from './serperService';
 import { searchHackerNews } from './hackerNewsService';
@@ -16,14 +16,33 @@ export const collectMarketData = async (params: SearchParams): Promise<Aggregate
   const isDeepDive = params.depth === 'Deep Dive';
 
   try {
-    const [tavilyResults, newsResults, redditResults, youtubeResults, serperResults, hnResults] = await Promise.all([
+    // Run two Serper queries to maximize coverage (Pain + Commercial)
+    const [
+      tavilyResults, 
+      newsResults, 
+      redditResults, 
+      youtubeResults, 
+      serperPainResults, // Reviews/Complaints
+      serperGeneralResults, // Ads/Shopping/General
+      hnResults
+    ] = await Promise.all([
       searchTavily(`${params.keyword} market trends problems`, isDeepDive ? 'advanced' : 'basic'),
       searchTavilyNews(`${params.keyword} industry news`),
-      searchReddit(`${params.keyword} complaints reviews`), // NEW
-      searchYouTube(params.keyword, params.geography), // Includes Transcripts now
+      searchReddit(`${params.keyword} complaints reviews`),
+      searchYouTube(params.keyword, params.lookback as any),
       searchSerper(`${params.keyword} reviews and complaints`, params.geography),
+      searchSerper(params.keyword, params.geography), // Broad query for Ads/Shopping
       searchHackerNews(params.keyword)
     ]);
+
+    // Combine and Deduplicate Serper Results
+    const serperMap = new Map();
+    [...serperPainResults, ...serperGeneralResults].forEach(item => {
+      if (!serperMap.has(item.link)) {
+        serperMap.set(item.link, item);
+      }
+    });
+    const serperResults = Array.from(serperMap.values());
 
     const allResults = [
       ...tavilyResults,
