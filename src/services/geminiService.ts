@@ -108,7 +108,7 @@ export const analyzeMarket = async (
 
     if (onStatusUpdate) onStatusUpdate(AnalysisStatus.CLUSTERING);
 
-        const prompt = `
+    const prompt = `
       Act as a world-class GapSpotter specializing in market research for ${params.geography}. 
       
       ## CONTEXT
