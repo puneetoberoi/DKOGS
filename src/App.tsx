@@ -97,7 +97,12 @@ const App: React.FC = () => {
   const { user } = useAuth(); 
   const [status, setStatus] = useState<AnalysisStatus>(AnalysisStatus.IDLE);
   const [report, setReport] = useState<MarketReport | null>(null);
-  const [activeTab, setActiveTab] = useState<'search' | 'trending' | 'dashboard' | 'comparison'>('search');
+  
+  // PERSISTENCE: Initialize activeTab from localStorage
+  const [activeTab, setActiveTab] = useState<'search' | 'trending' | 'dashboard' | 'comparison'>(() => {
+    return (localStorage.getItem('active_tab') as any) || 'search';
+  });
+
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
 
@@ -106,8 +111,27 @@ const App: React.FC = () => {
   const [locationData, setLocationData] = useState<LocationData>(getDefaultLocation());
   const [pendingSave, setPendingSave] = useState(false);
   const [comparisonReports, setComparisonReports] = useState<MarketReport[]>([]);
-  const [isSaved, setIsSaved] = useState(false);
-  const [isRefresh, setIsRefresh] = useState(false); // NEW STATE
+  
+  // PERSISTENCE: Initialize isSaved from localStorage
+  const [isSaved, setIsSaved] = useState(() => {
+    return localStorage.getItem('is_saved') === 'true';
+  });
+  
+  const [isRefresh, setIsRefresh] = useState(false);
+
+  // PERSISTENCE: Save activeTab on change
+  useEffect(() => {
+    localStorage.setItem('active_tab', activeTab);
+  }, [activeTab]);
+
+  // PERSISTENCE: Save isSaved on change
+  useEffect(() => {
+    if (isSaved) {
+      localStorage.setItem('is_saved', 'true');
+    } else {
+      localStorage.removeItem('is_saved');
+    }
+  }, [isSaved]);
 
   useEffect(() => {
     if (report) {
@@ -129,6 +153,7 @@ const App: React.FC = () => {
           setStatus(AnalysisStatus.COMPLETE);
           setIsDemoMode(false);
           setIsSaved(true);
+          setActiveTab('search'); // Force to search view for linked report
           window.history.replaceState({}, '', window.location.pathname);
         } else {
           console.error('Failed to load report from URL');
@@ -256,12 +281,10 @@ const App: React.FC = () => {
     setIsSaved(true);
   };
 
-  // NEW: Handle Refresh Logic
   const handleRefreshReport = (oldReport: MarketReport) => {
     setForm(prev => ({
       ...prev,
       keyword: oldReport.keyword,
-      // Keep other form defaults or hydrate from oldReport if desired
     }));
     setIsRefresh(true);
     setShowPaymentModal(true);
@@ -286,7 +309,7 @@ const App: React.FC = () => {
     setStatus(AnalysisStatus.IDLE);
     setIsDemoMode(false);
     setIsSaved(false);
-    setIsRefresh(false); // Reset refresh
+    setIsRefresh(false);
     localStorage.removeItem('current_report');
     
     setForm(prev => ({ 
@@ -308,7 +331,7 @@ const App: React.FC = () => {
     setStatus(AnalysisStatus.IDLE);
     setIsDemoMode(false);
     setIsSaved(false);
-    setIsRefresh(false); // Reset refresh
+    setIsRefresh(false);
     setForm(prev => ({ ...prev, keyword: '' }));
     localStorage.removeItem('current_report'); 
   };
