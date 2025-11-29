@@ -1,6 +1,6 @@
 import { searchTavily, searchTavilyNews } from './tavilyService';
-import { searchYoutube } from './youtubeService';
-import { searchSerper } from './serperService'; // New Import
+import { searchYouTube } from './youtubeService'; // FIXED TYPO (YouTube)
+import { searchSerper } from './serperService';
 import { searchHackerNews } from './hackerNewsService';
 import type { SearchParams } from '../schema';
 
@@ -13,15 +13,16 @@ export interface AggregatedData {
 export const collectMarketData = async (params: SearchParams): Promise<AggregatedData> => {
   console.log(`🔍 Starting data collection for: "${params.keyword}"`);
   
-  // Increase limit for Deep Dive? logic can be added here
+  // Increase limit for Deep Dive logic can be added here if services support it
+  // For now, relying on default robust limits
   const isDeepDive = params.depth === 'Deep Dive';
 
   try {
     const [tavilyResults, newsResults, youtubeResults, serperResults, hnResults] = await Promise.all([
       searchTavily(`${params.keyword} market trends problems`, isDeepDive ? 'advanced' : 'basic'),
-      searchTavilyNews(`${params.keyword} industry news`), // Replaces NewsAPI
-      searchYoutube(params.keyword, params.geography),
-      searchSerper(`${params.keyword} reviews and complaints`, params.geography), // Replaces SerpAPI
+      searchTavilyNews(`${params.keyword} industry news`),
+      searchYouTube(params.keyword, params.geography), // FIXED CALL
+      searchSerper(`${params.keyword} reviews and complaints`, params.geography),
       searchHackerNews(params.keyword)
     ]);
 
@@ -33,7 +34,6 @@ export const collectMarketData = async (params: SearchParams): Promise<Aggregate
       ...hnResults
     ];
 
-    // Format for Gemini
     let formattedText = `Search Context: ${params.keyword} in ${params.geography}\n\n`;
     
     allResults.forEach((item, index) => {
