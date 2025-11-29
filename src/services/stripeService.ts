@@ -23,6 +23,7 @@ export interface CheckoutParams {
   sources: string[];
   region: string;
   lookbackDays: number;
+  isRefresh?: boolean; // ADD THIS LINE
 }
 
 export async function createCheckoutSession(params: CheckoutParams): Promise<{ sessionId: string; url: string } | null> {
@@ -50,17 +51,9 @@ export async function createCheckoutSession(params: CheckoutParams): Promise<{ s
 }
 
 export async function redirectToCheckout(sessionId: string): Promise<void> {
-  // New method: Use the URL returned from create-checkout API
-  // The API returns { sessionId, url } - we redirect to the URL directly
-  
-  // First, try to get the URL from sessionStorage (set by PaymentModal)
+  // This function is largely unused now as we redirect via URL, 
+  // but keeping it for type safety if needed elsewhere.
   const pendingAnalysis = sessionStorage.getItem('pendingAnalysis');
-  
-  if (pendingAnalysis) {
-    // We already have the session, the PaymentModal will handle redirect via URL
-    return;
-  }
-
-  // Fallback: Create a new session and redirect
+  if (pendingAnalysis) return;
   throw new Error('Session not found. Please try again.');
 }
