@@ -26,7 +26,7 @@ export const searchSerper = async (query: string, region: string = 'us'): Promis
       body: JSON.stringify({
         q: query,
         gl: gl,
-        num: 80 // MAX DATA
+        num: 100 // MAX DATA
       })
     });
 
