@@ -110,8 +110,10 @@ const OpportunityCard: React.FC<{ gap: GapData; index: number; rank: number; isD
       {expanded && (
         <div className="px-6 pb-6 pt-2 border-t border-slate-100 bg-slate-50/30 animate-in slide-in-from-top-2 fade-in duration-200">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            {/* COL 1: Pain Points */}
             <div className="md:col-span-1">
-              <h4 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center"><AlertCircle className="w-3 h-3 mr-1"/> Pain Points</h4>
+              <h4 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center"><AlertCircle className="w-3 h-3 mr-1"/> Validated Pain Points</h4>
               <ul className="space-y-2">
                 {gap.painPoints.map((pt, i) => (
                   <li key={i} className="flex items-start text-sm text-slate-700 bg-white p-2 rounded border border-slate-100">
@@ -121,13 +123,39 @@ const OpportunityCard: React.FC<{ gap: GapData; index: number; rank: number; isD
                 ))}
               </ul>
             </div>
+
+            {/* COL 2: Solutions & Failure Reasons */}
             <div className="md:col-span-1">
+               <div className="mb-4">
+                 <h4 className="text-xs font-bold text-slate-400 uppercase mb-2 flex items-center"><X className="w-3 h-3 mr-1"/> Why Current Solutions Fail</h4>
+                 <p className="text-sm text-slate-600 italic border-l-2 border-rose-200 pl-2 bg-white p-2 rounded-r">
+                   {gap.existingSolutions || "No effective solutions found in current market."}
+                 </p>
+               </div>
+
                <h4 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center"><Target className="w-3 h-3 mr-1"/> Recommended Solution</h4>
                <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 h-full">
                  <p className="text-sm text-indigo-900 font-medium leading-relaxed">{gap.recommendedSolution}</p>
                </div>
             </div>
+
+            {/* COL 3: Stats & Frustration */}
             <div className="md:col-span-1 grid grid-cols-1 gap-3">
+               
+               {/* Frustration Level (New) */}
+               <div className="bg-white p-3 rounded-lg border border-slate-100">
+                 <p className="text-xs text-slate-500 mb-1 flex justify-between">
+                   <span>Frustration Level</span>
+                   <span className="text-rose-600 font-bold">{100 - gap.sentimentScore}%</span>
+                 </p>
+                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                   <div 
+                     className="h-full bg-gradient-to-r from-rose-400 to-rose-600" 
+                     style={{ width: `${100 - gap.sentimentScore}%` }}
+                   ></div>
+                 </div>
+               </div>
+
                <div className="bg-white p-3 rounded-lg border border-slate-100">
                  <p className="text-xs text-slate-500">Willingness to Pay</p>
                  <p className="font-bold text-slate-800">{gap.willingnessToPay}</p>
