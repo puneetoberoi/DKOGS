@@ -238,9 +238,10 @@ export const analyzeMarket = async (
               opportunityScore: { type: Type.INTEGER },
               recommendedSolution: { type: Type.STRING },
               searchVolume: { type: Type.STRING },
-              sources: { type: Type.ARRAY, items: { type: Type.STRING } }
+              sources: { type: Type.ARRAY, items: { type: Type.STRING } },
+              existingSolutions: { type: Type.STRING } // NEW
             },
-            required: ["title", "description", "painPoints", "sentimentScore", "willingnessToPay", "estimatedPrice", "competitionDensity", "opportunityScore", "recommendedSolution", "sources"]
+            required: ["title", "description", "painPoints", "sentimentScore", "willingnessToPay", "estimatedPrice", "competitionDensity", "opportunityScore", "recommendedSolution", "sources", "existingSolutions"] // NEW
           }
         }
       },
