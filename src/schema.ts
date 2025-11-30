@@ -24,6 +24,7 @@ export interface SearchParams {
   gapCount?: number;
 }
 
+// Updated GapData with existingSolutions
 export interface GapData {
   title: string;
   description: string;
@@ -36,9 +37,10 @@ export interface GapData {
   recommendedSolution: string;
   searchVolume?: string;
   sources: string[];
-  existingSolutions?: string;
+  existingSolutions?: string; // This was missing
 }
 
+// Updated MarketGap with existingSolutions
 export interface MarketGap {
   id?: string;
   title: string;
@@ -61,7 +63,7 @@ export interface MarketGap {
   difficulty?: 'low' | 'medium' | 'high';
   timeToMarket?: string;
   potentialRevenue?: string;
-  existingSolutions?: string;
+  existingSolutions?: string; // This was missing
 }
 
 export interface Competitor {
@@ -93,7 +95,6 @@ export interface AnalyzedSample {
   snippet: string;
 }
 
-// NEW INTERFACE
 export interface RelatedOpportunity {
   keyword: string;
   reason: string;
@@ -119,7 +120,6 @@ export interface MarketReport {
   marketTrends: MarketTrend[];
   analyzedSamples: AnalyzedSample[];
   
-  // NEW FIELD
   relatedOpportunities?: RelatedOpportunity[];
   
   dataSources: string[];
