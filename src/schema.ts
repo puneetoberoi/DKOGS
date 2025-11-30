@@ -60,6 +60,7 @@ export interface MarketGap {
   difficulty?: 'low' | 'medium' | 'high';
   timeToMarket?: string;
   potentialRevenue?: string;
+  existingSolutions?: string;
 }
 
 export interface Competitor {
