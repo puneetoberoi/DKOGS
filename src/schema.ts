@@ -36,6 +36,7 @@ export interface GapData {
   recommendedSolution: string;
   searchVolume?: string;
   sources: string[];
+  existingSolutions?: string;
 }
 
 export interface MarketGap {
