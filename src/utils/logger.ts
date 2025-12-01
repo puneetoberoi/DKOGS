@@ -19,9 +19,9 @@ export interface LogEntry {
 }
 
 const STORAGE_KEYS = {
-  SUCCESS: 'gapspotter_success_logs',
-  ERROR: 'gapspotter_error_logs',
-  QUERY: 'gapspotter_query_logs',
+  SUCCESS: 'marketgap_success_logs',
+  ERROR: 'marketgap_error_logs',
+  QUERY: 'marketgap_query_logs',
 };
 
 const MAX_LOGS_PER_TYPE = 100;
@@ -67,10 +67,10 @@ async function sendLogToApi(entry: LogEntry): Promise<void> {
         userConsentGiven: entry.userConsentGiven,
       }),
     }).catch((error) => {
-      console.warn('[GapSpotter] Failed to send log to API:', error);
+      console.warn('[marketgap] Failed to send log to API:', error);
     });
   } catch (error) {
-    console.warn('[GapSpotter] Failed to send log to API:', error);
+    console.warn('[marketgap] Failed to send log to API:', error);
   }
 }
 
@@ -92,7 +92,7 @@ export function logSuccess(data: {
   logs.push(entry);
   storeLogs(STORAGE_KEYS.SUCCESS, logs);
 
-  console.log('[GapSpotter] Success:', entry);
+  console.log('[marketgap] Success:', entry);
   sendLogToApi(entry);
 }
 
@@ -112,7 +112,7 @@ export function logError(data: {
   logs.push(entry);
   storeLogs(STORAGE_KEYS.ERROR, logs);
 
-  console.error('[GapSpotter] Error:', entry);
+  console.error('[marketgap] Error:', entry);
   sendLogToApi(entry);
 }
 
@@ -133,7 +133,7 @@ export function logQuery(data: {
   logs.push(entry);
   storeLogs(STORAGE_KEYS.QUERY, logs);
 
-  console.log('[GapSpotter] Query:', entry);
+  console.log('[marketgap] Query:', entry);
   sendLogToApi(entry);
 }
 
@@ -160,7 +160,7 @@ export function logPaymentSuccess(data: {
   logs.push(entry);
   storeLogs(STORAGE_KEYS.SUCCESS, logs);
 
-  console.log('[GapSpotter] Payment Success:', entry);
+  console.log('[marketgap] Payment Success:', entry);
   sendLogToApi(entry);
 }
 
@@ -181,7 +181,7 @@ export function logPaymentError(data: {
   logs.push(entry);
   storeLogs(STORAGE_KEYS.ERROR, logs);
 
-  console.error('[GapSpotter] Payment Error:', entry);
+  console.error('[marketgap] Payment Error:', entry);
   sendLogToApi(entry);
 }
 
