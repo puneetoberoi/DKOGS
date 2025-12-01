@@ -9,7 +9,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
     <footer className="bg-white border-t border-slate-200 py-8 mt-auto">
       <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="text-xs text-slate-500">
-          &copy; {new Date().getFullYear()} GapSpotter. All rights reserved.
+          &copy; {new Date().getFullYear()} MarketGap. All rights reserved.
         </div>
         
         <div className="flex gap-6 text-sm text-slate-600">
