@@ -29,10 +29,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     },
   });
 
-  const dashboardLink = `https://dkogs.vercel.app/?view_report=${reportId}`;
+  const origin = req.headers.origin || 'https://marketgap.ca'; // Replace with actual domain
+  const dashboardLink = `${origin}/?view_report=${reportId}`;
 
   const mailOptions = {
-    from: `"GapSpotter AI" <${process.env.GMAIL_USER}>`,
+    from: `"Market Gap" <${process.env.GMAIL_USER}>`,
     to: email,
     subject: `Market Analysis Ready: ${keyword}`,
     html: `
