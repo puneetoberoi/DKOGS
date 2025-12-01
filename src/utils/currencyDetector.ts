@@ -8,7 +8,7 @@ export interface LocationData {
   consentGiven: boolean;
 }
 
-const LOCATION_CACHE_KEY = 'gapspotter_location_data';
+const LOCATION_CACHE_KEY = 'MarketGap_location_data';
 
 // Get cached location data
 export function getCachedLocation(): LocationData | null {
@@ -79,12 +79,12 @@ export function getDefaultLocation(): LocationData {
 
 // Check if user has already given consent
 export function hasUserConsent(): boolean {
-  return localStorage.getItem('gapspotter_location_consent') === 'true';
+  return localStorage.getItem('MarketGap_location_consent') === 'true';
 }
 
 // Save user consent
 export function saveUserConsent(consented: boolean): void {
-  localStorage.setItem('gapspotter_location_consent', consented.toString());
+  localStorage.setItem('MarketGap_location_consent', consented.toString());
 }
 
 // Format price based on currency
