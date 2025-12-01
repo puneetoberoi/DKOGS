@@ -15,6 +15,8 @@ import { FirstTimeUserModal } from './components/LegalDisclaimers';
 import { PaymentModal } from './components/PaymentModal';
 import { AuthModal } from './components/AuthModal';
 import { UserMenu } from './components/UserMenu';
+import { Footer } from './components/Footer'; // NEW
+import { PrivacyPage, TermsPage } from './components/LegalPages'; // NEW
 import { useAuth } from './contexts/AuthContext';
 import { Search, Globe, Clock, MapPin, Sliders, ArrowRight, Sparkles, LayoutDashboard, Flame, FolderKanban } from 'lucide-react';
 import {
@@ -98,8 +100,8 @@ const App: React.FC = () => {
   const [status, setStatus] = useState<AnalysisStatus>(AnalysisStatus.IDLE);
   const [report, setReport] = useState<MarketReport | null>(null);
   
-  // PERSISTENCE: Initialize activeTab from localStorage
-  const [activeTab, setActiveTab] = useState<'search' | 'trending' | 'dashboard' | 'comparison'>(() => {
+  // PERSISTENCE: Initialize activeTab from localStorage (Added privacy/terms types)
+  const [activeTab, setActiveTab] = useState<'search' | 'trending' | 'dashboard' | 'comparison' | 'privacy' | 'terms'>(() => {
     return (localStorage.getItem('active_tab') as any) || 'search';
   });
 
@@ -401,7 +403,7 @@ const App: React.FC = () => {
     });
   };
 
-    const handleTrendingSelect = (topic: string) => {
+  const handleTrendingSelect = (topic: string) => {
     // 1. Clear previous report data
     setReport(null);
     setStatus(AnalysisStatus.IDLE);
@@ -418,8 +420,6 @@ const App: React.FC = () => {
 
     // 3. Go to search screen (User clicks Scan -> Pay)
     setActiveTab('search');
-    
-    // REMOVED: setShowPaymentModal(true); 
   };
 
   const runAnalysis = useCallback(async (e?: React.FormEvent) => {
@@ -723,10 +723,16 @@ const App: React.FC = () => {
             reports={comparisonReports} 
             onBack={() => setActiveTab('dashboard')} 
           />
+        ) : activeTab === 'privacy' ? (
+          <PrivacyPage onBack={() => setActiveTab('search')} />
+        ) : activeTab === 'terms' ? (
+          <TermsPage onBack={() => setActiveTab('search')} />
         ) : (
           <SearchContent />
         )}
       </main>
+
+      <Footer onNavigate={(page) => setActiveTab(page)} />
     </div>
   );
 };
