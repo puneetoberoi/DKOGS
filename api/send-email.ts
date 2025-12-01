@@ -35,7 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       subject: `Market Analysis Ready: ${keyword}`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #4f46e5;">GapSpotter</h1>
+          <h1 style="color: #4f46e5;">Market Gap Updates:</h1>
           <h2>Your analysis for <strong>"${keyword}"</strong> is safe.</h2>
           <p>You successfully saved this report to your Market Gap Dashboard.</p>
           <br/>
