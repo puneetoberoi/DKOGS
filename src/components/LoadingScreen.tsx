@@ -19,11 +19,11 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ status, useGroq, useBytez
     ];
     
     if (useGroq) {
-      baseSteps.push({ id: AnalysisStatus.GROQ_ANALYSIS, label: "Groq: Twitter Sentiment", icon: MessageSquare });
+      baseSteps.push({ id: AnalysisStatus.GROQ_ANALYSIS, label: "Calculating Public Sentiment", icon: MessageSquare });
     }
     
     if (useBytez) {
-      baseSteps.push({ id: AnalysisStatus.BYTEZ_ANALYSIS, label: "Bytez: Tech Scanning", icon: Cpu });
+      baseSteps.push({ id: AnalysisStatus.BYTEZ_ANALYSIS, label: "Scanning Pain Points", icon: Cpu });
     }
     
     baseSteps.push(
@@ -43,7 +43,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ status, useGroq, useBytez
       
       <h2 className="text-2xl font-bold text-slate-800 mb-2">Generating Gap Report</h2>
       <p className="text-slate-500 mb-12 text-center max-w-md">
-        GapSpotter is orchestrating multiple AI models to find your next business opportunity.
+        MarketGap is orchestrating multiple AI models to find your next business opportunity.
       </p>
 
       <div className="w-full space-y-4">
