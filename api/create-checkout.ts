@@ -83,7 +83,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           price_data: {
             currency: currency.toLowerCase(),
             product_data: {
-              name: isRefresh ? 'MarketGap Refresh' : 'MarketGap Market Analysis',
+              name: isRefresh ? 'Market Gap Refresh' : 'Market Gap Market Analysis',
               description: finalLabel,
             },
             unit_amount: finalAmount,
