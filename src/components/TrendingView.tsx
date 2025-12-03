@@ -113,7 +113,7 @@ const TrendingView: React.FC<TrendingViewProps> = ({ onSelectTopic }) => {
         </div>
         <h2 className="text-3xl font-bold text-slate-900 mb-4">Trending Market Gaps</h2>
         <p className="text-slate-600 max-w-2xl mx-auto">
-          Discover high-potential opportunities identified by the GapSpotter community.
+          Discover high-potential opportunities identified by the DemandOwl community.
         </p>
       </div>
 
