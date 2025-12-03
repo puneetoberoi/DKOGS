@@ -184,7 +184,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const hasSeenLegal = localStorage.getItem('gapspotter_legal_accepted');
+    const hasSeenLegal = localStorage.getItem('demandowl_legal_accepted');
     if (!hasSeenLegal) {
       setShowLegalModal(true);
     } else {
@@ -238,7 +238,7 @@ const App: React.FC = () => {
   }, [user, pendingSave, report]);
 
   const handleLegalAccept = async (locationConsent: boolean) => {
-    localStorage.setItem('gapspotter_legal_accepted', 'true');
+    localStorage.setItem('demandowl_legal_accepted', 'true');
     setShowLegalModal(false);
     
     if (locationConsent) {
