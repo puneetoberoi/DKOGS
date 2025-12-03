@@ -24,25 +24,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Dynamic Dashboard Link (Kept 100% same logic)
   const protocol = req.headers['x-forwarded-proto'] || 'https';
-  const host = req.headers.host || 'marketgap.ca';
+  const host = req.headers.host || 'demandowl.com';
   const origin = `${protocol}://${host}`;
   const dashboardLink = `${origin}/?view_report=${reportId}`;
 
   try {
     const { data, error } = await resend.emails.send({
-      from: 'Market Gap <updates@marketgap.ca>', // CHANGED: Uses verified domain
+      from: 'Demand Owl <updates@demandowl.com>', // CHANGED: Uses verified domain
       to: [email],
       subject: `Market Analysis Ready: ${keyword}`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #4f46e5;">Market Gap Updates:</h1>
+          <h1 style="color: #4f46e5;">Demand Owl Updates:</h1>
           <h2>Your analysis for <strong>"${keyword}"</strong> is safe.</h2>
-          <p>You successfully saved this report to your Market Gap Dashboard.</p>
+          <p>You successfully saved this report to your Demand Owl Dashboard.</p>
           <br/>
           <a href="${dashboardLink}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">View Report</a>
           <br/><br/>
           <p style="color: #666; font-size: 12px;">
-            Sent via Marketgap AI
+            Sent via DemandOwl AI
           </p>
         </div>
       `,
