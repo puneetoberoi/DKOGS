@@ -72,7 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const finalAmount = isRefresh ? Math.round(pricing.amount * 0.5) : pricing.amount;
     const finalLabel = isRefresh ? `${pricing.label} (Refresh 50% Off)` : pricing.label;
 
-    const origin = req.headers.origin || 'https://dkogs.vercel.app';
+    const origin = req.headers.origin || 'https://demandowl.com';
 
     console.log('Creating Stripe session:', { currency, amount: finalAmount, isRefresh });
 
