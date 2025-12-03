@@ -32,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { data, error } = await resend.emails.send({
       from: 'Demand Owl <updates@demandowl.com>', // CHANGED: Uses verified domain
       to: [email],
-      subject: `Market Analysis Ready: ${keyword}`,
+      subject: `Your Sentiment Analysis Ready: ${keyword}`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
           <h1 style="color: #4f46e5;">Demand Owl Updates:</h1>
