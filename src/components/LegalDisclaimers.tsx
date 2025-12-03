@@ -22,7 +22,7 @@ export const FirstTimeUserModal: React.FC<FirstTimeUserModalProps> = ({ onAccept
             <div className="flex items-center gap-3">
               <Shield className="w-8 h-8" />
               <div>
-                <h2 className="text-xl font-bold">Welcome to MarketGap</h2>
+                <h2 className="text-xl font-bold">Welcome to DemandOwl</h2>
                 <p className="text-indigo-200 text-sm">Market Research Tool for US & Canada</p>
               </div>
             </div>
@@ -34,12 +34,12 @@ export const FirstTimeUserModal: React.FC<FirstTimeUserModalProps> = ({ onAccept
               <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-amber-800">
                 <p className="font-semibold mb-1">Important Disclaimer</p>
-                <p>MarketGap provides AI-generated market insights for informational purposes only. Results should not be considered financial, legal, or professional advice.</p>
+                <p>DemandOwl provides AI-generated market insights for informational purposes only. Results should not be considered financial, legal, or professional advice.</p>
               </div>
             </div>
 
             <div className="space-y-3">
-              <h3 className="font-semibold text-slate-800">By using MarketGap, you acknowledge:</h3>
+              <h3 className="font-semibold text-slate-800">By using DemandOwl, you acknowledge:</h3>
               
               <div className="space-y-2 text-sm text-slate-600">
                 <div className="flex items-start gap-2">
@@ -144,7 +144,7 @@ export const InvestmentDisclaimer: React.FC = () => (
     <p className="text-[10px] text-slate-400 max-w-2xl mx-auto leading-relaxed">
       ⚖️ <strong>LEGAL DISCLAIMER:</strong> This report is for informational purposes only. 
       It does not constitute financial, investment, legal, or professional advice. 
-      MarketGap and its operators accept no liability for decisions, financial losses, 
+      DemandOwl and its operators accept no liability for decisions, financial losses, 
       or outcomes resulting from the use of this tool. All trademarks mentioned belong 
       to their respective owners.
     </p>
