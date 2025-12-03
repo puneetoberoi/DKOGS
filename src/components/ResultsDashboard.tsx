@@ -235,7 +235,7 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">
-            Market Gap Report
+            Demand Owl Report
             {isDemoMode && <span className="ml-2 text-sm font-normal text-amber-600">(Sample Preview)</span>}
           </h1>
           <p className="text-slate-500 mt-1">Deep analysis for <span className="font-semibold text-indigo-600">{report.industry}</span></p>
