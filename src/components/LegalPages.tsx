@@ -9,7 +9,7 @@ export const PrivacyPage: React.FC<{ onBack: () => void }> = ({ onBack }) => (
     <h1 className="text-3xl font-bold text-slate-900 mb-6">Privacy Policy</h1>
     <div className="prose prose-slate text-slate-600">
       <p><strong>Effective Date:</strong> {new Date().toLocaleDateString()}</p>
-      <p>MarketGap ("we", "our", "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our AI-powered market intelligence platform.</p>
+      <p>DemandOwl ("we", "our", "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use our AI-powered market intelligence platform.</p>
       
       <h3>1. Information We Collect</h3>
       <ul className="list-disc pl-5 space-y-1">
@@ -40,7 +40,7 @@ export const PrivacyPage: React.FC<{ onBack: () => void }> = ({ onBack }) => (
       <p>We retain your generated reports and account data indefinitely to provide your history dashboard. You may request account deletion at any time by contacting support.</p>
       
       <h3>5. Contact Us</h3>
-      <p>For privacy concerns, please contact: <a href="mailto:support@marketgap.ca" className="text-indigo-600 hover:underline">support@marketgap.ca</a></p>
+      <p>For privacy concerns, please contact: <a href="mailto:support@demandowl.com" className="text-indigo-600 hover:underline">support@demandowl.com</a></p>
     </div>
   </div>
 );
@@ -55,13 +55,13 @@ export const TermsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => (
       <p><strong>Last Updated:</strong> {new Date().toLocaleDateString()}</p>
       
       <h3>1. Acceptance of Terms</h3>
-      <p>By accessing or using MarketGap (the "Service"), you agree to be bound by these Terms. If you do not agree, please do not use the Service.</p>
+      <p>By accessing or using DemandOwl (the "Service"), you agree to be bound by these Terms. If you do not agree, please do not use the Service.</p>
       
       <h3>2. Nature of Service</h3>
-      <p>MarketGap is an AI-powered research tool that aggregates publicly available data to generate market insights. <strong>We provide information, not advice.</strong></p>
+      <p>DemandOwl is an AI-powered research tool that aggregates publicly available data to generate market insights. <strong>We provide information, not advice.</strong></p>
       <div className="bg-amber-50 border-l-4 border-amber-500 p-4 my-4">
         <p className="text-amber-900 font-medium text-sm">
-          <strong>Disclaimer of Warranties:</strong> The Service is provided "AS IS". MarketGap makes no warranties regarding the accuracy, reliability, or profitability of the market data provided. The AI may generate errors or hallucinations. Users should independently verify all data before making financial decisions.
+          <strong>Disclaimer of Warranties:</strong> The Service is provided "AS IS". DemandOwl makes no warranties regarding the accuracy, reliability, or profitability of the market data provided. The AI may generate errors or hallucinations. Users should independently verify all data before making financial decisions.
         </p>
       </div>
       
@@ -72,16 +72,16 @@ export const TermsPage: React.FC<{ onBack: () => void }> = ({ onBack }) => (
       </ul>
       
       <h3>4. Intellectual Property</h3>
-      <p>You retain the rights to the specific insights you generate. MarketGap retains all rights to the platform, code, and underlying technology. You may not scrape, reverse engineer, or resell the Service.</p>
+      <p>You retain the rights to the specific insights you generate. DemandOwl retains all rights to the platform, code, and underlying technology. You may not scrape, reverse engineer, or resell the Service.</p>
       
       <h3>5. Limitation of Liability</h3>
-      <p>To the maximum extent permitted by law, MarketGap shall not be liable for any indirect, incidental, or consequential damages arising from your use of the Service. Our total liability is limited to the amount you paid for the Service in the 12 months preceding the claim.</p>
+      <p>To the maximum extent permitted by law, DemandOwl shall not be liable for any indirect, incidental, or consequential damages arising from your use of the Service. Our total liability is limited to the amount you paid for the Service in the 12 months preceding the claim.</p>
       
       <h3>6. Governing Law</h3>
       <p>These Terms are governed by the laws of Canada. Any disputes shall be resolved in the courts of Canada.</p>
 
       <h3>7. Contact</h3>
-      <p>Questions? Email us at <a href="mailto:support@marketgap.ca" className="text-indigo-600 hover:underline">support@marketgap.ca</a>.</p>
+      <p>Questions? Email us at <a href="mailto:support@demandowl.com" className="text-indigo-600 hover:underline">support@demandowl.com</a>.</p>
     </div>
   </div>
 );
