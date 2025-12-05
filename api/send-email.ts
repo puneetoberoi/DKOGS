@@ -54,7 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     console.log(`Email sent to ${email}`);
-    return res.status(200).json({ success: true, data }); // Kept success: true for compat
+    return res.status(200).json({ success: true, data }); // Kept success: true for compat.
 
   } catch (error: any) {
     console.error('Email API Error:', error);
