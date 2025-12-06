@@ -1,4 +1,4 @@
-// src/components/LegalDisclaimers.tsx
+'use client';
 
 import React, { useState } from 'react';
 import { Shield, AlertTriangle, CheckCircle, MapPin } from 'lucide-react';
