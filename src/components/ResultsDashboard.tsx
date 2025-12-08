@@ -1,7 +1,8 @@
-// src/components/ResultsDashboard.tsx
+// components/ResultsDashboard.tsx
+// RESTORED: Your exact original code - only import paths changed for Next.js
 
 import React, { useState, useMemo } from 'react';
-import type { MarketReport, GapData } from '../schema';
+import type { MarketReport, GapData } from '@/types/schema';
 import { 
   SentimentDistribution, 
   MarketTrendChart, 
@@ -22,10 +23,9 @@ interface ResultsDashboardProps {
   onUpgrade?: () => void;
   onSave: () => void;
   onAnalyzeRelated?: (keyword: string) => void;
-  isSaved?: boolean; // NEW PROP
+  isSaved?: boolean;
 }
 
-// ... (Keep helpers getCategoryForSource, normalizeScore, DetailModal, StatCard, OpportunityCard exactly as is) ...
 const getCategoryForSource = (source: string): string => {
   const s = source.toLowerCase();
   if (s.includes('reddit') || s.includes('hacker news') || s.includes('forum')) return 'Online Communities';
@@ -142,7 +142,7 @@ const OpportunityCard: React.FC<{ gap: GapData; index: number; rank: number; isD
             {/* COL 3: Stats & Frustration */}
             <div className="md:col-span-1 grid grid-cols-1 gap-3">
                
-               {/* Frustration Level (New) */}
+               {/* Frustration Level */}
                <div className="bg-white p-3 rounded-lg border border-slate-100">
                  <p className="text-xs text-slate-500 mb-1 flex justify-between">
                    <span>Frustration Level</span>
@@ -188,7 +188,7 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
   onUpgrade,
   onSave,
   onAnalyzeRelated,
-  isSaved = false // DEFAULT FALSE
+  isSaved = false
 }) => {
   const [modalType, setModalType] = useState<'metrics' | 'competitors' | 'sentiment' | 'score' | null>(null);
   const [activeSources, setActiveSources] = useState<string[]>(report.dataSources || []);
@@ -245,7 +245,7 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
           {!isDemoMode && (
             <button 
               onClick={onSave} 
-              disabled={isSaved} // DISABLE IF SAVED
+              disabled={isSaved}
               className={`px-6 py-2.5 text-sm font-bold text-white rounded-xl transition-all shadow-lg flex items-center gap-2 transform ${
                 isSaved 
                   ? 'bg-emerald-500 cursor-default shadow-emerald-200' 
